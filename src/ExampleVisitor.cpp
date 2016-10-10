@@ -17,17 +17,16 @@ bool ExampleVisitor::VisitFunctionDecl(clang::FunctionDecl *func)
 {
 	mNumFunctions++;
 	std::string funcName = func->getNameInfo().getName().getAsString();
-	llvm::errs() << "Function declaration: " << funcName <<'\n';
-	// if (funcName == "do_math") 
-	// {
-	// 	mRewriter->ReplaceText(func->getLocation(), funcName.length(), "add5");
-	// 	errs() << "** Rewrote function def: " << funcName << "\n";         
-	// }         
+	if (funcName == "somefunc") 
+	{
+		func->dump();
+	}
 	return true;
 }
 	 
 bool ExampleVisitor::VisitStmt(clang::Stmt *st) 
 {
+	// st->dump();
 	// if (clang::ReturnStmt *ret = llvm::dyn_cast<clang::ReturnStmt>(st)) 
 	// {
 	// 	llvm::errs() << "Return statement...\n";

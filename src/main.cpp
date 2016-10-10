@@ -25,6 +25,16 @@ int main(int argc, const char** argv)
 	clang::Rewriter rewriter;
 	ExampleFrontendActionFactory factory(&rewriter);
 	int result = tool.run(&factory);
+
+	auto& sourceMgr = rewriter.getSourceMgr();
+	StringRef buffer = sourceMgr.getBufferData(sourceMgr.getMainFileID());
+	llvm::errs() << buffer.str() << '\n';
+
+	// auto mainfile = rewriter.getSourceMgr().getMainFileID();
+
+
+	// rewriter.getEditBuffer(rewriter.getSourceMgr().getMainFileID()).write(llvm::errs());
+
 	return result;
 	
 	// return 0;

@@ -16,18 +16,19 @@ set(source_files
 find_package(LLVM REQUIRED)
 find_package(Clang REQUIRED)
 
-add_executable(hello ${source_files})
+add_executable(refactor ${source_files})
 
-target_include_directories(hello PUBLIC ${LLVM_INCLUDE_DIRS})
-target_include_directories(hello PUBLIC ${Clang_INCLUDE_DIRS})
-
-# target_compile_options(hello PUBLIC "-fno-rtti")
+target_include_directories(refactor PUBLIC ${LLVM_INCLUDE_DIRS})
+target_include_directories(refactor PUBLIC ${Clang_INCLUDE_DIRS})
 
 include(TargetSetRTTI)
-target_set_rtti(hello OFF)
+target_set_rtti(refactor OFF)
 
-# target_compile_definitions(hello PUBLIC -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
+target_compile_options(refactor PUBLIC "-Wall")
+target_compile_options(refactor PUBLIC "-Werror")
 
-target_link_libraries(hello PUBLIC ${Clang_LIBRARIES})
-target_link_libraries(hello PUBLIC ${LLVM_LIBRARIES})
-target_link_libraries(hello PUBLIC ${LLVM_SYSTEM_LIBRARIES})
+target_link_libraries(refactor PUBLIC ${Clang_LIBRARIES})
+target_link_libraries(refactor PUBLIC ${LLVM_LIBRARIES})
+target_link_libraries(refactor PUBLIC ${LLVM_SYSTEM_LIBRARIES})
+
+add_subdirectory(test)
