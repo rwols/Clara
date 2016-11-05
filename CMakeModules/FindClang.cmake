@@ -1,7 +1,3 @@
-if (NOT LLVM_FOUND)
-	message(FATAL_ERROR "LLVM is required for Clang.")
-endif ()
-
 # Find Clang
 #
 # It defines the following variables
@@ -11,6 +7,10 @@ endif ()
 # Clang_VERSION_MAJOR - The major version number
 # Clang_VERSION_MINOR - The minor version number
 # Clang_VERSION       - Is the same as ${Clang_VERSION_MAJOR}.${Clang_VERSION_MINOR}
+
+if (NOT LLVM_FOUND)
+	message(FATAL_ERROR "LLVM is required for Clang.")
+endif ()
 
 macro(find_and_add_lib library_name)
 	find_library(CLANG_${library_name}_LIB ${library_name} ${LLVM_LIBRARY_DIRS} ${CLANG_LIBRARY_DIRS})
