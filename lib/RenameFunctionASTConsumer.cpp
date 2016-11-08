@@ -9,18 +9,6 @@ RenameFunctionASTConsumer::RenameFunctionASTConsumer(
 {
 	/* Empty for now */
 }
- 
-// bool RenameFunctionASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef declgroupref)
-// {
-// 	// a DeclGroupRef may have multiple Decls, so we iterate through each one
-	
-// 	for (auto* decl : declgroupref)
-// 	{
-// 		mVisitor->TraverseDecl(decl);
-// 	}
-
-// 	return true;
-// }
 
 void RenameFunctionASTConsumer::HandleTranslationUnit(clang::ASTContext& context)
 {

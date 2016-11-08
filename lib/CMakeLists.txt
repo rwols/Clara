@@ -6,12 +6,13 @@ find_package(Boost COMPONENTS python-py35 REQUIRED)
 configure_file(Configuration.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/Configuration.hpp)
 
 set(source_files
+	CustomCodeCompleteConsumer.cpp
 	PythonBindings.cpp
 	RenameFunctionASTConsumer.cpp
 	RenameFunctionFrontendAction.cpp
 	RenameFunctionFrontendActionFactory.cpp
 	RenameFunctionVisitor.cpp
-	Project.cpp)
+	Session.cpp)
 
 add_library(Clara SHARED ${source_files})
 set_target_properties(Clara PROPERTIES PREFIX "")

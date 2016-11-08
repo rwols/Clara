@@ -23,7 +23,7 @@ int main()
 	void (*functionPointer)();
 	functionPointer = &somefunc;
 	functionPointer();
-
+	
 	return 0;
 }
 
