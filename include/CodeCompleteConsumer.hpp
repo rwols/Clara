@@ -5,13 +5,15 @@
 #include <boost/python.hpp>
 #include <string>
 
-class CustomCodeCompleteConsumer : public clang::CodeCompleteConsumer 
+namespace Clara {
+
+class CodeCompleteConsumer : public clang::CodeCompleteConsumer 
 {
 public:
 
 	bool includeOptionalArguments = true;
 
-	CustomCodeCompleteConsumer(const clang::CodeCompleteOptions& options);
+	CodeCompleteConsumer(const clang::CodeCompleteOptions& options);
 
 	void ProcessCodeCompleteResults(
 		clang::Sema &sema, 
@@ -29,14 +31,11 @@ public:
 
 	clang::CodeCompletionTUInfo& getCodeCompletionTUInfo() override;
 
-	inline boost::python::list getPythonResultList() const
-	{
-		return mResultList;
-	}
+	boost::python::list getPythonResultList() const noexcept;
 
 private:
 
-	clang::CodeCompletionTUInfo CCTUInfo;
+	clang::CodeCompletionTUInfo mCCTUInfo;
 
 	boost::python::list mResultList;
 
@@ -54,3 +53,5 @@ private:
 
 	void printCompletionResult(std::ostream& os, clang::CodeCompletionResult* result);
 };
+
+} // namespace Clara

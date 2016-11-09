@@ -6,12 +6,13 @@
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Frontend/FrontendActions.h>
-#include <clang/Frontend/TextDiagnosticPrinter.h>
+// #include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Frontend/CompilerInstance.h>
 #include <clang/Basic/TargetInfo.h>
 #include "RenameFunctionFrontendActionFactory.hpp"
-#include "CustomCodeCompleteConsumer.hpp"
+#include "CodeCompleteConsumer.hpp"
 
-#include <iostream>
+namespace Clara {
 
 const char* standardIncludes[] =
 {
@@ -87,11 +88,16 @@ boost::python::list Session::codeComplete(const std::string& filename, const cha
 	codeCompleteOptions.IncludeCodePatterns = 0;
 	codeCompleteOptions.IncludeGlobals = 1;
 	codeCompleteOptions.IncludeBriefComments = 1;
-	instance.setCodeCompletionConsumer(new CustomCodeCompleteConsumer(codeCompleteOptions));
+	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
 
 	auto& preprocessorOptions = instance.getPreprocessorOpts();
 	preprocessorOptions.clearRemappedFiles();
-	if (buffer != nullptr) preprocessorOptions.addRemappedFile(filename, buffer);
+	if (buffer != nullptr)
+	{
+		llvm::MemoryBufferRef bufferAsRef(buffer, filename);
+		auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
+		preprocessorOptions.addRemappedFile(filename, memBuffer.release());
+	}
 	instance.createPreprocessor(TranslationUnitKind::TU_Complete);
 	auto& preprocessor = instance.getPreprocessor();
 	auto& builtinInfo = preprocessor.getBuiltinInfo();
@@ -121,8 +127,10 @@ boost::python::list Session::codeComplete(const std::string& filename, const cha
 	{
 		action.Execute();
 		action.EndSourceFile();
-		auto consumer = static_cast<const CustomCodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
+		auto consumer = static_cast<const Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
 		result = consumer->getPythonResultList();
 	}
 	return result;
 }
+
+} // namespace Clara

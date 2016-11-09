@@ -6,7 +6,8 @@ find_package(Boost COMPONENTS python-py35 REQUIRED)
 configure_file(Configuration.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/Configuration.hpp)
 
 set(source_files
-	CustomCodeCompleteConsumer.cpp
+	CodeCompleteConsumer.cpp
+	DiagnosticConsumer.cpp
 	PythonBindings.cpp
 	RenameFunctionASTConsumer.cpp
 	RenameFunctionFrontendAction.cpp
@@ -36,5 +37,7 @@ target_link_libraries(Clara PUBLIC ${LLVM_SYSTEM_LIBRARIES})
 target_link_libraries(Clara PUBLIC ${PYTHON_LIBRARIES})
 target_link_libraries(Clara PUBLIC ${Boost_LIBRARIES})
 
-include(cotire)
-cotire(Clara)
+# include(cotire)
+# cotire(Clara)
+
+set_target_properties(Clara PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})

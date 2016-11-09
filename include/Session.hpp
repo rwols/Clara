@@ -7,6 +7,8 @@
 #include <clang/Frontend/ASTUnit.h>
 #include <boost/python.hpp>
 
+namespace Clara {
+
 class Session
 {
 public:
@@ -22,3 +24,5 @@ private:
 	std::unique_ptr<clang::tooling::CompilationDatabase> mCompilationDatabase;
 	std::unique_ptr<clang::tooling::ClangTool> mTool;
 };
+
+} // namespace Clara

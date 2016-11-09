@@ -2,27 +2,34 @@
 #include <iostream>
 
 /**
- * @brief some brief comment about SomeStruct!
- * @details A very long description.
+ * @brief      some brief comment about SomeStruct!
+ * @details    A very long description.
  */
 struct SomeStruct
 {
-    /**
-     * @brief a brief comment about this lonely integer.
-     * @details Boring details.
-     */
+
     int data;
 
+
+    /**
+     * @brief      does whatty things
+     *
+     * @param[in]  another         another SomeStruct
+     * @param[in]  extraParamater  The extra paramater
+     *
+     * @return     returns floaty things.
+     */
     float what(const SomeStruct& another, float extraParamater = 2.0f) const;
 };
 
 namespace A
 {
     /**
-     * @brief      Does very useful things. Sticks the thing in the thing.
+     * @brief      does foo things
      *
-     * @param[in]  arg1  The argument 1
-     * @param[in]  arg2  The argument 2
+     * @param[in]  arg1        the arg 1
+     * @param[in]  arg2        the arg 2 very floaty
+     * @param[in]  defaultArg  don't touch this unless you have to
      */
     void foo(int arg1, float arg2, unsigned defaultArg = 0)
     {
@@ -32,14 +39,19 @@ namespace A
 
 int baz(float x1, float x2)
 {
+    /**
+     * @brief      asdf
+     * @details    asdf
+     * @return     asdf
+     */
     return static_cast<int>(x1 + x2);
 }
 
 int main()
 {
     SomeStruct hello;
-    hello.what(hello, 10.0f);
+    hello.what(asdf, asdf);
+    SomeStruct whatevs;
 
-    
     return 0;
 }

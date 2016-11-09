@@ -14,7 +14,7 @@
 	"build_systems":
 	[
 		{
-			"name": "Sublime IDE",
+			"name": "Clara",
 			"working_dir": "${project_path}/build",
 			"shell_cmd": "cmake --build .",
 			"file_regex": "^(/.[^:]*):(\\d+):(\\d+): error: (.*)$",

@@ -1,23 +1,24 @@
-#include "CustomCodeCompleteConsumer.hpp"
-#include <llvm/Support/raw_os_ostream.h>
+#include "CodeCompleteConsumer.hpp"
 
-CustomCodeCompleteConsumer::CustomCodeCompleteConsumer(const clang::CodeCompleteOptions& options)
+namespace Clara {
+
+CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options)
 : clang::CodeCompleteConsumer(options, false)
-, CCTUInfo(new clang::GlobalCodeCompletionAllocator)
+, mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */
 }
 
-void CustomCodeCompleteConsumer::ProcessCodeCompleteResults(
+void CodeCompleteConsumer::ProcessCodeCompleteResults(
 	clang::Sema &sema, 
 	clang::CodeCompletionContext context,
 	clang::CodeCompletionResult* results,
 	unsigned numResults)
 {
-	std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
-	{
-		return lhs.Priority > rhs.Priority;
-	});
+	// std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
+	// {
+	// 	return lhs.Priority > rhs.Priority;
+	// });
 
 	for (unsigned i = 0; i < numResults; ++i) 
 	{
@@ -25,7 +26,7 @@ void CustomCodeCompleteConsumer::ProcessCodeCompleteResults(
 	}
 }
 
-void CustomCodeCompleteConsumer::ProcessOverloadCandidates(
+void CodeCompleteConsumer::ProcessOverloadCandidates(
 	clang::Sema &sema, 
 	unsigned currentArg,
 	clang::CodeCompleteConsumer::OverloadCandidate* candidates,
@@ -34,15 +35,13 @@ void CustomCodeCompleteConsumer::ProcessOverloadCandidates(
 	/* empty */
 }
 
-boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
+boost::python::list CodeCompleteConsumer::ProcessCodeCompleteResult(
 	clang::Sema& sema,
 	clang::CodeCompletionContext context,
 	clang::CodeCompletionResult& result)
 {
 	using namespace boost;
 	using namespace clang;
-	using std::cout;
-
 
 	python::list pair;
 	std::string first, second, informative;
@@ -52,7 +51,7 @@ boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
 	{
 		case CodeCompletionResult::RK_Declaration:
 		{
-			auto completion = result.CreateCodeCompletionString(sema, context, getAllocator(), CCTUInfo, includeBriefComments());
+			auto completion = result.CreateCodeCompletionString(sema, context, getAllocator(), mCCTUInfo, includeBriefComments());
 			if (completion == nullptr)
 			{
 				second = result.Declaration->getNameAsString();
@@ -61,12 +60,6 @@ boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
 			else
 			{
 				ProcessCodeCompleteString(*completion, argCount, first, second, informative);
-				// auto comment = completion->getBriefComment();
-				// if (comment != nullptr)
-				// {
-				// 	first.append("\t");
-				// 	first.append(comment);
-				// }
 			}
 			break;
 		}
@@ -78,7 +71,7 @@ boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
 
 		case CodeCompletionResult::RK_Macro: 
 		{
-			auto completion = result.CreateCodeCompletionString(sema, context, getAllocator(), CCTUInfo, includeBriefComments());
+			auto completion = result.CreateCodeCompletionString(sema, context, getAllocator(), mCCTUInfo, includeBriefComments());
 			if (completion == nullptr)
 			{
 				second = result.Macro->getNameStart();
@@ -93,8 +86,16 @@ boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
 
 		case CodeCompletionResult::RK_Pattern: 
 		{
-			second = result.Pattern->getAsString();
-			first = second + "\tPattern";
+			auto completion = result.CreateCodeCompletionString(sema, context, getAllocator(), mCCTUInfo, includeBriefComments());
+			if (completion == nullptr)
+			{
+				second = result.Macro->getNameStart();
+				first = second + "\tPattern";
+			}
+			else
+			{
+				ProcessCodeCompleteString(*completion, argCount, first, second, informative);
+			}
 			break;
 		}
 	}
@@ -115,7 +116,7 @@ boost::python::list CustomCodeCompleteConsumer::ProcessCodeCompleteResult(
 	return pair;
 }
 
-void CustomCodeCompleteConsumer::ProcessCodeCompleteString(
+void CodeCompleteConsumer::ProcessCodeCompleteString(
 	const clang::CodeCompletionString& ccs, 
 	unsigned& argCount,
 	std::string& first, 
@@ -124,7 +125,12 @@ void CustomCodeCompleteConsumer::ProcessCodeCompleteString(
 {
 	using namespace clang;
 
-	std::string onTheRight;
+	for (unsigned j = 0; j < ccs.getAnnotationCount(); ++j)
+	{
+		const char* annotation = ccs.getAnnotation(j);
+		informative += annotation;
+		if (j != ccs.getAnnotationCount() - 1) informative += ' ';
+	}
 
 	for (const auto& chunk : ccs)
 	{
@@ -135,11 +141,13 @@ void CustomCodeCompleteConsumer::ProcessCodeCompleteString(
 				// typically a keyword or the name of a declarator or macro.
 				first += chunk.Text;
 				second += chunk.Text;
+				informative += chunk.Text;
 				break;
 			case CodeCompletionString::CK_Text:
 				// A piece of text that should be placed in the buffer,
 				// e.g., parentheses or a comma in a function call.
-				first += chunk.Text;
+				// first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_Optional:
@@ -154,7 +162,7 @@ void CustomCodeCompleteConsumer::ProcessCodeCompleteString(
 			case CodeCompletionString::CK_Placeholder:
 				// A string that acts as a placeholder for, e.g., a function call argument.
 				++argCount;
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += "${";
 				second += std::to_string(argCount);
 				second += ":";
@@ -169,106 +177,116 @@ void CustomCodeCompleteConsumer::ProcessCodeCompleteString(
 			case CodeCompletionString::CK_ResultType:
 				// A piece of text that describes the type of an entity or, 
 				// for functions and methods, the return type.
-				first += chunk.Text;
-				first += " ";
+				informative += chunk.Text;
+				informative += " ";
 				break;
 			case CodeCompletionString::CK_CurrentParameter:
 				// A piece of text that describes the parameter that corresponds to 
 				// the code-completion location within a function call, message send, 
 				// macro invocation, etc.
 				++argCount;
-				first += chunk.Text;
-				second += "$";
+				informative += chunk.Text;
+				second += "${";
 				second += std::to_string(argCount);
-				// second += "${";
-				// second += std::to_string(argCount);
-				// second += ":";
-				// second += chunk.Text;
-				// second += "}";
+				second += ":";
+				second += chunk.Text;
+				second += "}";
 				break;
 			case CodeCompletionString::CK_LeftParen:
 				// A left parenthesis ('(').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_RightParen:
 				// A right parenthesis (')').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_LeftBracket:
 				// A left bracket ('[').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_RightBracket:
 				// A right bracket (']').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_LeftBrace:
 				// A left brace ('{').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_RightBrace:
 				// A right brace ('}').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_LeftAngle:
 				// A left angle bracket ('<').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_RightAngle:
 				// A right angle bracket ('>').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_Comma:
 				// A comma separator (',').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_Colon:
 				// A colon (':').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_SemiColon:
 				// A semicolon (';').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_Equal:
 				// An '=' sign.
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_HorizontalSpace:
 				// Horizontal whitespace (' ').
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			case CodeCompletionString::CK_VerticalSpace:
 				// Vertical whitespace ('\n' or '\r\n', depending on the platform).
-				first += chunk.Text;
+				informative += chunk.Text;
 				second += chunk.Text;
 				break;
 			default:
 				break;
 		}
-		// second += " ";
+	}
+
+	if (ccs.getBriefComment() != nullptr)
+	{
+		informative += ": ";
+		informative += ccs.getBriefComment();
 	}
 }
 
-clang::CodeCompletionAllocator& CustomCodeCompleteConsumer::getAllocator() 
+clang::CodeCompletionAllocator& CodeCompleteConsumer::getAllocator() 
 {
-	return CCTUInfo.getAllocator();
+	return mCCTUInfo.getAllocator();
 }
 
-clang::CodeCompletionTUInfo& CustomCodeCompleteConsumer::getCodeCompletionTUInfo()
+clang::CodeCompletionTUInfo& CodeCompleteConsumer::getCodeCompletionTUInfo()
 {
-	return CCTUInfo;
+	return mCCTUInfo;
 }
+
+boost::python::list CodeCompleteConsumer::getPythonResultList() const noexcept
+{
+	return mResultList;
+}
+
+} // namespace Clara

@@ -1,46 +1,64 @@
-#include <iostream>
-
-namespace A {
-
-// forward declaration -- 2spooky4me
-void somefunc();
-
+/**
+ * @brief      Adds two integers together.
+ *
+ * @param[in]  x     The first number.
+ * @param[in]  y     The second number.
+ *
+ * @return     The sum of the two numbers.
+ */
+int add(int x, int y)
+{
+    return x + y;
 }
 
-namespace B {
+/**
+ * @brief      My awesome class.
+ */
+class MyClass
+{
+public:
 
-// oops in another namespace -- don't rename me!
-void somefunc();
+    /**
+     * @brief      Constructor
+     *
+     * @param[in]  identifier  The identifier
+     */
+    MyClass(const char* identifier)
+    : mIdentifier(identifier)
+    {
 
-}
+    }
+
+
+    /**
+     * @brief      Destroys the object.
+     */
+    ~MyClass()
+    {
+
+    }
+
+    /**
+     * @brief      Gets the name.
+     *
+     * @return     The name.
+     */
+    const char* getName() const noexcept
+    {
+        return this->mIdentifier;
+    }
+private:
+    const char* mIdentifier;
+};
 
 int main()
 {
-	using namespace A;
-	std::cout << "Hello, world!\n";
-	somefunc();
+    int z = add(10, 20);
+    int w = add(z, 30);
+    int a = add(z, w);
 
-	void (*functionPointer)();
-	functionPointer = &somefunc;
-	functionPointer();
-	
-	return 0;
-}
+    auto inst = new MyClass("hello, world!");
+    inst->getName();
 
-namespace A {
-
-void somefunc()
-{
-	std::cout << "We are in a function.\n";
-}
-
-}
-
-namespace B {
-
-void somefunc()
-{
-	std::cout << "You better not rename me!\n";
-}
-
+    return 0;
 }
