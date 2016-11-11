@@ -37,21 +37,26 @@ namespace A
     }
 }
 
+
+/**
+ * @brief      asdf
+ * @details    asdf
+ * @return     asdf
+ */
 int baz(float x1, float x2)
 {
-    /**
-     * @brief      asdf
-     * @details    asdf
-     * @return     asdf
-     */
     return static_cast<int>(x1 + x2);
 }
 
 int main()
 {
+    std::cout << "Hello, world!\n";
+
+    baz(10, 20);
+
     SomeStruct hello;
-    hello.what(asdf, asdf);
-    SomeStruct whatevs;
+
+    
 
     return 0;
 }

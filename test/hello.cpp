@@ -8,7 +8,7 @@
  */
 int add(int x, int y)
 {
-    return x + y;
+	return x + y;
 }
 
 /**
@@ -18,47 +18,49 @@ class MyClass
 {
 public:
 
-    /**
-     * @brief      Constructor
-     *
-     * @param[in]  identifier  The identifier
-     */
-    MyClass(const char* identifier)
-    : mIdentifier(identifier)
-    {
+	/**
+	 * @brief      Constructor
+	 *
+	 * @param[in]  identifier  The identifier
+	 */
+	MyClass(const char* identifier)
+	: mIdentifier(identifier)
+	{
 
-    }
+	}
 
 
-    /**
-     * @brief      Destroys the object.
-     */
-    ~MyClass()
-    {
+	/**
+	 * @brief      Destroys the object.
+	 */
+	~MyClass()
+	{
 
-    }
+	}
 
-    /**
-     * @brief      Gets the name.
-     *
-     * @return     The name.
-     */
-    const char* getName() const noexcept
-    {
-        return this->mIdentifier;
-    }
+	/**
+	 * @brief      Gets the name.
+	 *
+	 * @return     The name.
+	 */
+	const char* getName() const
+	{
+		return this->mIdentifier;
+	}
 private:
-    const char* mIdentifier;
+	const char* mIdentifier;
 };
 
 int main()
 {
-    int z = add(10, 20);
-    int w = add(z, 30);
-    int a = add(z, w);
+	MyClass asdf("hello, world!");
+	asdf.getName();
 
-    auto inst = new MyClass("hello, world!");
-    inst->getName();
+	asdf.getName();
 
-    return 0;
+	asdf.getName();
+
+	asdf.getName();
+
+	return 0;
 }

@@ -6,7 +6,10 @@ find_package(Boost COMPONENTS python-py35 REQUIRED)
 configure_file(Configuration.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/Configuration.hpp)
 
 set(source_files
+	CancellableASTConsumer.cpp
+	CancellableSyntaxOnlyAction.cpp
 	CodeCompleteConsumer.cpp
+	CompletionResultListToPythonList.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
 	RenameFunctionASTConsumer.cpp
@@ -15,29 +18,29 @@ set(source_files
 	RenameFunctionVisitor.cpp
 	Session.cpp)
 
-add_library(Clara SHARED ${source_files})
-set_target_properties(Clara PROPERTIES PREFIX "")
+add_library(cpp SHARED ${source_files})
+set_target_properties(cpp PROPERTIES PREFIX "")
 
-target_include_directories(Clara PUBLIC ${LLVM_INCLUDE_DIRS})
-target_include_directories(Clara PUBLIC ${Clang_INCLUDE_DIRS})
-target_include_directories(Clara PUBLIC ${PYTHON_INCLUDE_DIRS})
-target_include_directories(Clara PUBLIC ${Boost_INCLUDE_DIRS})
-target_include_directories(Clara PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(Clara PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../include)
+target_include_directories(cpp PUBLIC ${LLVM_INCLUDE_DIRS})
+target_include_directories(cpp PUBLIC ${Clang_INCLUDE_DIRS})
+target_include_directories(cpp PUBLIC ${PYTHON_INCLUDE_DIRS})
+target_include_directories(cpp PUBLIC ${Boost_INCLUDE_DIRS})
+target_include_directories(cpp PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(cpp PUBLIC ${CMAKE_CURRENT_LIST_DIR}/../include)
 
 # Warn about everything.
-target_compile_options(Clara PUBLIC "-Wall")
+target_compile_options(cpp PUBLIC "-Wall")
 
 # Uncomment this to turn all warnings into errors,
-# target_compile_options(Clara PUBLIC "-Werror")
+# target_compile_options(cpp PUBLIC "-Werror")
 
-target_link_libraries(Clara PUBLIC ${Clang_LIBRARIES})
-target_link_libraries(Clara PUBLIC ${LLVM_LIBRARIES})
-target_link_libraries(Clara PUBLIC ${LLVM_SYSTEM_LIBRARIES})
-target_link_libraries(Clara PUBLIC ${PYTHON_LIBRARIES})
-target_link_libraries(Clara PUBLIC ${Boost_LIBRARIES})
+target_link_libraries(cpp PUBLIC ${Clang_LIBRARIES})
+target_link_libraries(cpp PUBLIC ${LLVM_LIBRARIES})
+target_link_libraries(cpp PUBLIC ${LLVM_SYSTEM_LIBRARIES})
+target_link_libraries(cpp PUBLIC ${PYTHON_LIBRARIES})
+target_link_libraries(cpp PUBLIC ${Boost_LIBRARIES})
 
 # include(cotire)
-# cotire(Clara)
+# cotire(cpp)
 
-set_target_properties(Clara PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+set_target_properties(cpp PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})

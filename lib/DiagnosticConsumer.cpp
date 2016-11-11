@@ -27,6 +27,24 @@ void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
 	boost::python::list result;
 	for (unsigned i = 0; i < info.getNumArgs(); ++i)
 	{
+		switch (info.getArgKind(i))
+		{
+			case clang::DiagnosticsEngine::ak_std_string:
+				result.append(info.getArgStdStr(i));
+				break;
+			case clang::DiagnosticsEngine::ak_c_string:
+				result.append(info.getArgCStr(i));
+				break;
+			case clang::DiagnosticsEngine::ak_sint:
+				result.append(info.getArgSInt(i));
+				break;
+			case clang::DiagnosticsEngine::ak_uint:
+				result.append(info.getArgUInt(i));
+				break;
+			default:
+				result.append("unkown type");
+				break;
+		}
 		result.append(info.getArgStdStr(i));
 	}
 	handleDiagnostic(level, result);

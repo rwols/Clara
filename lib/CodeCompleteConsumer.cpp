@@ -1,4 +1,5 @@
 #include "CodeCompleteConsumer.hpp"
+#include <boost/python.hpp>
 
 namespace Clara {
 
@@ -15,14 +16,17 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 	clang::CodeCompletionResult* results,
 	unsigned numResults)
 {
-	// std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
-	// {
-	// 	return lhs.Priority > rhs.Priority;
-	// });
+	// Clear the list, from other runs.
+	mResultList.clear();
+
+	std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
+	{
+		return lhs.Priority > rhs.Priority;
+	});
 
 	for (unsigned i = 0; i < numResults; ++i) 
 	{
-		mResultList.append(ProcessCodeCompleteResult(sema, context, results[i]));
+		mResultList.emplace_back(ProcessCodeCompleteResult(sema, context, results[i]));
 	}
 }
 
@@ -35,7 +39,7 @@ void CodeCompleteConsumer::ProcessOverloadCandidates(
 	/* empty */
 }
 
-boost::python::list CodeCompleteConsumer::ProcessCodeCompleteResult(
+std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteResult(
 	clang::Sema& sema,
 	clang::CodeCompletionContext context,
 	clang::CodeCompletionResult& result)
@@ -43,7 +47,7 @@ boost::python::list CodeCompleteConsumer::ProcessCodeCompleteResult(
 	using namespace boost;
 	using namespace clang;
 
-	python::list pair;
+	std::pair<std::string, std::string> pair;
 	std::string first, second, informative;
 	unsigned argCount = 0;
 
@@ -111,8 +115,8 @@ boost::python::list CodeCompleteConsumer::ProcessCodeCompleteResult(
 		first += informative;
 	}
 
-	pair.append(first);
-	pair.append(second);
+	pair.first = std::move(first);
+	pair.second = std::move(second);
 	return pair;
 }
 
@@ -284,9 +288,15 @@ clang::CodeCompletionTUInfo& CodeCompleteConsumer::getCodeCompletionTUInfo()
 	return mCCTUInfo;
 }
 
-boost::python::list CodeCompleteConsumer::getPythonResultList() const noexcept
+void CodeCompleteConsumer::moveResult(std::vector<std::pair<std::string, std::string>>& result)
 {
-	return mResultList;
+	result = std::move(mResultList);
+	mResultList.clear();
+}
+
+void CodeCompleteConsumer::clearResult()
+{
+	mResultList.clear();
 }
 
 } // namespace Clara

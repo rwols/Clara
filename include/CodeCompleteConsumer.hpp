@@ -2,7 +2,7 @@
 
 #include <clang/Sema/CodeCompleteConsumer.h>
 #include <clang/Sema/Overload.h>
-#include <boost/python.hpp>
+#include <boost/python/list.hpp>
 #include <string>
 
 namespace Clara {
@@ -31,15 +31,17 @@ public:
 
 	clang::CodeCompletionTUInfo& getCodeCompletionTUInfo() override;
 
-	boost::python::list getPythonResultList() const noexcept;
+	void moveResult(std::vector<std::pair<std::string, std::string>>& result);
+
+	void clearResult();
 
 private:
 
 	clang::CodeCompletionTUInfo mCCTUInfo;
 
-	boost::python::list mResultList;
+	std::vector<std::pair<std::string, std::string>> mResultList;
 
-	boost::python::list ProcessCodeCompleteResult(
+	std::pair<std::string, std::string> ProcessCodeCompleteResult(
 		clang::Sema& sema,
 		clang::CodeCompletionContext context,
 		clang::CodeCompletionResult& result);

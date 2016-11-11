@@ -11,6 +11,19 @@
 	{
 		"tab_size": 4
 	},
+	"clara":
+	{
+		"cmake_file": "CMakeLists.txt",
+		"build_folder": "/home/raoul/.config/sublime-text-3/Packages/Clara/build",
+		"code_complete_options":
+		{
+			"include_macros": true,
+			"include_code_patterns": true,
+			"include_globals": true,
+			"include_brief_comments": true,
+			"include_optional_arguments": true
+		}
+	},
 	"build_systems":
 	[
 		{
