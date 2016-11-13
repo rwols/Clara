@@ -55,7 +55,8 @@ private:
 
 int main()
 {
-	MyClass asdf("hello, world!");
-
-	return 0;
+	MyClass asdf("hello, world!");	
+	std::cout << asdf.getName() << '\n';
+  	return 0;    
 }
+ 

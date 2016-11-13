@@ -29,7 +29,8 @@ BOOST_PYTHON_MODULE(cpp)
 		.def_readwrite("reporter", &Clara::Session::reporter)
 		.def("codeComplete", &Clara::Session::codeComplete)
 		.def("codeCompleteAsync", &Clara::Session::codeCompleteAsync)
-		.def("filename", &Clara::Session::getFilename, return_value_policy<copy_const_reference>())mAction.EndSourceFile()
+		.def("cancelAsyncCompletion", &Clara::Session::cancelAsyncCompletion)
+		.def("filename", &Clara::Session::getFilename, return_value_policy<copy_const_reference>())
 	;
 
 	to_python_converter<std::vector<std::pair<std::string, std::string>>, Clara::CompletionResultListToPythonList>();

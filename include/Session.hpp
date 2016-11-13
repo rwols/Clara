@@ -61,6 +61,12 @@ public:
 
 	void codeCompleteAsync(const char* unsavedBuffer, int row, int column, boost::python::object callback);
 
+
+	/**
+	 * @brief      Cancels the in-flight completion that is occurring in a background thread.
+	 */
+	void cancelAsyncCompletion();
+
 	/**
 	 * @brief      Returns the filename for the current session.
 	 * 

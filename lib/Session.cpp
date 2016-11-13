@@ -320,6 +320,11 @@ const std::string& Session::getFilename() const noexcept
 	return mFilename;
 }
 
+void Session::cancelAsyncCompletion()
+{
+	mAction.cancel();
+}
+
 // bool gPleaseCancel(false);
 // bool gIsRunning(false);
 // std::mutex gCancelMutex;
@@ -327,51 +332,51 @@ const std::string& Session::getFilename() const noexcept
 
 // void Session::testAsync(boost::python::object callback)
 // {
-// 	std::unique_lock<std::mutex> cancelLock(gCancelMutex);
-// 	if (gIsRunning)
-// 	{
-// 		callback("Task is already running. Waiting...");
-// 		gPleaseCancel = true;
-// 		gVar.wait(cancelLock, []{ return !gIsRunning; });
-// 		callback("Done!");
-// 	}
-// 	else
-// 	{
-// 		callback("Nothing is running.");
-// 	}
-// 	cancelLock.unlock();
-// 	std::thread task([=] () -> void
-// 	{
-// 		std::unique_lock<std::mutex> cancelLock(gCancelMutex);
-// 		gIsRunning = true;
-// 		cancelLock.unlock();
-// 		try
-// 		{
-// 			for (int i = 0; i < 30; ++i)
-// 			{
-// 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
-// 				cancelLock.lock();
-// 				if (gPleaseCancel)
-// 				{
-// 					cancelLock.unlock();
-// 					throw std::exception();
-// 				}
-// 				cancelLock.unlock();
-// 			}
-// 			PythonGILEnsurer pythonLock;
-// 			callback("Finished with long task.");
-// 		}
-// 		catch (const std::exception& e)
-// 		{
+//  std::unique_lock<std::mutex> cancelLock(gCancelMutex);
+//  if (gIsRunning)
+//  {
+//      callback("Task is already running. Waiting...");
+//      gPleaseCancel = true;
+//      gVar.wait(cancelLock, []{ return !gIsRunning; });
+//      callback("Done!");
+//  }
+//  else
+//  {
+//      callback("Nothing is running.");
+//  }
+//  cancelLock.unlock();
+//  std::thread task([=] () -> void
+//  {
+//      std::unique_lock<std::mutex> cancelLock(gCancelMutex);
+//      gIsRunning = true;
+//      cancelLock.unlock();
+//      try
+//      {
+//          for (int i = 0; i < 30; ++i)
+//          {
+//              std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//              cancelLock.lock();
+//              if (gPleaseCancel)
+//              {
+//                  cancelLock.unlock();
+//                  throw std::exception();
+//              }
+//              cancelLock.unlock();
+//          }
+//          PythonGILEnsurer pythonLock;
+//          callback("Finished with long task.");
+//      }
+//      catch (const std::exception& e)
+//      {
 
-// 		}
-// 		cancelLock.lock();
-// 		gPleaseCancel = false;
-// 		gIsRunning = false;
-// 		cancelLock.unlock();
-// 		gVar.notify_all();
-// 	});
-// 	task.detach(); // bye bye!
+//      }
+//      cancelLock.lock();
+//      gPleaseCancel = false;
+//      gIsRunning = false;
+//      cancelLock.unlock();
+//      gVar.notify_all();
+//  });
+//  task.detach(); // bye bye!
 // }
 
 } // namespace Clara
