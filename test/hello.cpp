@@ -51,16 +51,11 @@ private:
 	const char* mIdentifier;
 };
 
+#include <iostream>
+
 int main()
 {
 	MyClass asdf("hello, world!");
-	asdf.getName();
-
-	asdf.getName();
-
-	asdf.getName();
-
-	asdf.getName();
 
 	return 0;
 }

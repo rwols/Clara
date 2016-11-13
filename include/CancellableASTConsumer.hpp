@@ -11,15 +11,14 @@ class CancellableASTConsumer : public clang::ASTConsumer
 {
 public:
 
-	CancellableASTConsumer(CancellableSyntaxOnlyAction* creator);
-
-	std::atomic_bool cancel;
+	CancellableASTConsumer(CancellableSyntaxOnlyAction& mCreator);
+	~CancellableASTConsumer() noexcept;
 
 	bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
 
 private:
 
-	CancellableSyntaxOnlyAction* mCreator;
+	CancellableSyntaxOnlyAction& mCreator;
 
 };
 

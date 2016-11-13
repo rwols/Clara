@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <string>
 
 /**
  * @brief      some brief comment about SomeStruct!
@@ -19,7 +20,12 @@ struct SomeStruct
      *
      * @return     returns floaty things.
      */
-    float what(const SomeStruct& another, float extraParamater = 2.0f) const;
+    float what(const SomeStruct& another, float extraParamater = 2.0f) const
+    {
+        std::cout << "another data: " << another.data
+            << ", my data: " << this->data << " with extra param " << extraParamater << '\n';
+        return extraParamater + data;
+    }
 };
 
 namespace A
@@ -52,11 +58,9 @@ int main()
 {
     std::cout << "Hello, world!\n";
 
-    baz(10, 20);
+    SomeStruct asdf;
 
-    SomeStruct hello;
-
-    
+    SomeStruct asdf2;
 
     return 0;
 }

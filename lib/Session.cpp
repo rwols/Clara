@@ -1,6 +1,7 @@
 #include "Session.hpp"
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <llvm/Support/CommandLine.h>
 #include <clang/Sema/CodeCompleteConsumer.h>
 #include <clang/Tooling/CommonOptionsParser.h>
@@ -62,7 +63,7 @@ Session::Session(const std::string& filename)
 {
 	PythonGILReleaser releaser;
 
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	using namespace clang;
 	using namespace boost;
 
@@ -118,7 +119,7 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 {
 	PythonGILReleaser releaser;
 
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	using namespace clang;
 	using namespace clang::tooling;
 	using namespace boost;
@@ -165,7 +166,7 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 
 	mInstance.setInvocation(invocation.release());
 
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	using namespace clang;
 	using namespace boost;
 
@@ -183,10 +184,10 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 
 	// Create code completion consumer
 	CodeCompleteOptions codeCompleteOptions;
-	codeCompleteOptions.IncludeMacros = true;
+	codeCompleteOptions.IncludeMacros = false;
 	codeCompleteOptions.IncludeCodePatterns = true;
-	codeCompleteOptions.IncludeGlobals = true;
-	codeCompleteOptions.IncludeBriefComments = true;
+	codeCompleteOptions.IncludeGlobals = false;
+	codeCompleteOptions.IncludeBriefComments = false;
 	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
 
 	// Setup header search paths
@@ -216,45 +217,35 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 Session::Session(clang::DiagnosticConsumer& diagConsumer, const std::string& filename)
 : Session(filename)
 {
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	mInstance.getDiagnostics().setClient(&diagConsumer, false);
 }
 
 Session::Session(clang::DiagnosticConsumer& diagConsumer, const std::string& filename, const std::string& compileCommandsJson)
 : Session(filename, compileCommandsJson)
 {
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	mInstance.getDiagnostics().setClient(&diagConsumer, false);
 }
 
 Session::Session(Clara::DiagnosticConsumer& diagConsumer, const std::string& filename)
 : Session(static_cast<clang::DiagnosticConsumer&>(diagConsumer), filename)
 {
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	/* Empty on purpose. */
 }
 
 Session::Session(Clara::DiagnosticConsumer& diagConsumer, const std::string& filename, const std::string& compileCommandsJson)
 : Session(static_cast<clang::DiagnosticConsumer&>(diagConsumer), filename, compileCommandsJson) // Delegating constructor, does all the things above here.
 {
-	DEBUG_PRINT;
+	// DEBUG_PRINT;
 	/* Empty on purpose. */
 }
-
-std::mutex gCompletionMutex;
 
 std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
 	using namespace boost;
-
-	std::lock_guard<std::mutex> lock(gCompletionMutex);
-	{
-		std::stringstream ss;
-		ss << "Acquired lock for thread " << std::this_thread::get_id();
-		PythonGILEnsurer lock;
-		reporter(ss.str());
-	}
 
 	auto& frontendOptions = mInstance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.Line = row;
@@ -271,39 +262,12 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 
 	std::vector<std::pair<std::string, std::string>> result;
 
-	{
-		std::stringstream ss;
-		ss << "Cancelling action on thread " << std::this_thread::get_id();
-		PythonGILEnsurer lock;
-		reporter(ss.str());
-	}
-	mAction.setCancelAtomic(false);
 	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
 	{
-		{
-			std::stringstream ss;
-			ss << "Starting new execution on thread " << std::this_thread::get_id();
-			PythonGILEnsurer lock;
-			reporter(ss.str());
-		}
 		mAction.Execute();
 		mAction.EndSourceFile();
-		if (!mAction.isCancelledAtomic())
-		{
-			std::stringstream ss;
-			ss << "Fetching results for thread " << std::this_thread::get_id();
-			PythonGILEnsurer lock;
-			reporter(ss.str());
-			auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
-			consumer->moveResult(result);
-		}
-		else
-		{
-			std::stringstream ss;
-			ss << "Action was cancelled for thread " << std::this_thread::get_id();
-			PythonGILEnsurer lock;
-			reporter(ss.str());
-		}
+		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+		consumer->moveResult(result);
 	}
 	return result;
 }
@@ -312,32 +276,43 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 {
 	using namespace clang;
 	using namespace boost;
-	std::string copyOfUnsavedBuffer(unsavedBuffer);
 
-	auto lambda = [=] () -> void 
+	mAction.cancel();
+
+	auto& frontendOptions = mInstance.getFrontendOpts();
+	frontendOptions.CodeCompletionAt.Line = row;
+	frontendOptions.CodeCompletionAt.Column = column;
+
+	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
+	preprocessorOptions.RemappedFileBuffers.clear();
+	if (unsavedBuffer != nullptr)
 	{
-		try
+		llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
+		auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
+		preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
+	}
+	
+	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
+	{
+		std::thread task( [=] () -> void
 		{
-			auto results = codeComplete(copyOfUnsavedBuffer.c_str(), row, column);	
-			PythonGILEnsurer lock;
-			if (mAction.isCancelledAtomic()) return;
-			reporter("Completions are done. Calling callback.");
-			callback(results);
-		}
-		catch (const CancelException& e)
-		{
-			// do nothing
-		}
-		catch (const std::exception& e)
-		{
-			PythonGILEnsurer lock;
-			reporter("failed!");
-		}
-	};
-	reporter("Code completing asynchronously at row " + std::to_string(row) + ", column " + std::to_string(column));
-	mAction.setCancelAtomic(true);
-	std::thread t(lambda);
-	t.detach();
+			try
+			{
+				std::vector<std::pair<std::string, std::string>> result;
+				mAction.Execute();
+				mAction.EndSourceFile();
+				auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+				consumer->moveResult(result);
+				PythonGILEnsurer pythonLock;
+				callback(result);
+			}
+			catch (const CancelException& e)
+			{
+				mAction.EndSourceFile();
+			}
+		});
+		task.detach();
+	}
 }
 
 const std::string& Session::getFilename() const noexcept
@@ -345,27 +320,58 @@ const std::string& Session::getFilename() const noexcept
 	return mFilename;
 }
 
-void Session::testAsync(boost::python::object callback)
-{
-	auto lambda = [=] () -> void
-	{
-		{
-			PythonGILEnsurer lock;
-			callback("Starting a long task...");
-		}
+// bool gPleaseCancel(false);
+// bool gIsRunning(false);
+// std::mutex gCancelMutex;
+// std::condition_variable gVar;
 
-		std::this_thread::sleep_for(std::chrono::seconds(3));
+// void Session::testAsync(boost::python::object callback)
+// {
+// 	std::unique_lock<std::mutex> cancelLock(gCancelMutex);
+// 	if (gIsRunning)
+// 	{
+// 		callback("Task is already running. Waiting...");
+// 		gPleaseCancel = true;
+// 		gVar.wait(cancelLock, []{ return !gIsRunning; });
+// 		callback("Done!");
+// 	}
+// 	else
+// 	{
+// 		callback("Nothing is running.");
+// 	}
+// 	cancelLock.unlock();
+// 	std::thread task([=] () -> void
+// 	{
+// 		std::unique_lock<std::mutex> cancelLock(gCancelMutex);
+// 		gIsRunning = true;
+// 		cancelLock.unlock();
+// 		try
+// 		{
+// 			for (int i = 0; i < 30; ++i)
+// 			{
+// 				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+// 				cancelLock.lock();
+// 				if (gPleaseCancel)
+// 				{
+// 					cancelLock.unlock();
+// 					throw std::exception();
+// 				}
+// 				cancelLock.unlock();
+// 			}
+// 			PythonGILEnsurer pythonLock;
+// 			callback("Finished with long task.");
+// 		}
+// 		catch (const std::exception& e)
+// 		{
 
-		{
-			PythonGILEnsurer lock;
-			callback("Finished with long task.");
-		}
-	};
-
-	// lambda();
-
-	std::thread t(lambda);
-	t.detach();
-}
+// 		}
+// 		cancelLock.lock();
+// 		gPleaseCancel = false;
+// 		gIsRunning = false;
+// 		cancelLock.unlock();
+// 		gVar.notify_all();
+// 	});
+// 	task.detach(); // bye bye!
+// }
 
 } // namespace Clara

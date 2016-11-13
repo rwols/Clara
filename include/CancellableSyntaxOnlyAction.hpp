@@ -1,6 +1,7 @@
 #pragma once
 
 #include <clang/Frontend/FrontendActions.h>
+#include <condition_variable>
 
 namespace Clara {
 
@@ -10,9 +11,10 @@ class CancellableSyntaxOnlyAction : public clang::SyntaxOnlyAction
 {
 public:
 
-	bool isCancelledAtomic() const noexcept;
-	void setCancelAtomic(const bool);
-	void Execute();
+	/**
+	 * @brief      Blocks until the action is cancelled.
+	 */
+	void cancel();
 
 protected:
 
@@ -22,8 +24,11 @@ protected:
 
 private:
 
-	std::atomic_bool mCancel;
+	friend class CancellableASTConsumer;
 
+	std::condition_variable mCancelVar;
+	std::mutex mCancelMutex;
+	bool mPleaseCancel = false;
 	CancellableASTConsumer* mConsumer = nullptr;
 
 };

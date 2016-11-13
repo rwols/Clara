@@ -68,8 +68,6 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
-	void testAsync(boost::python::object callback);
-
 private:
 
 	std::string mFilename;
