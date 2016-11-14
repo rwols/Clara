@@ -15,14 +15,8 @@
 						"children": 
 						[
 							{
-								"command": "open_file",
-								"args": { "file": "${packages}/Clara/Clara.sublime-settings" },
-								"caption": "Settings - Default"
-							},
-							{
-								"command": "open_file",
-								"args": { "file": "${packages}/User/Clara.sublime-settings"},
-								"caption": "Settings - User"
+								"command": "open_clara_settings",
+								"caption": "Settings"
 							}
 						]
 					}

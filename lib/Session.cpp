@@ -58,12 +58,99 @@ const char* standardIncludes[] =
 	"/usr/include"
 };
 
+void Session::setupBasicLangOptions(const SessionOptions& options)
+{
+	// Setup language options
+	auto &langOptions = mInstance.getLangOpts();
+	langOptions.CPlusPlus = true;
+	langOptions.CPlusPlus11 = options.cxx11;
+	langOptions.CPlusPlus14 = options.cxx14;
+	langOptions.CPlusPlus1z = options.cxx14;
+}
+
+Session::Session(const SessionOptions& options)
+: mFilename(options.filename)
+{
+	using namespace clang;
+	using namespace clang::tooling;
+	using namespace boost;
+
+	PythonGILReleaser releaser;
+
+	// Setup diagnostics engine
+	mInstance.createDiagnostics();
+
+	std::string errorMsg;
+	auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
+	if (compdb)
+	{
+		auto compileCommands = compdb->getCompileCommands(mFilename);
+		if (!compileCommands.empty())
+		{
+			std::vector<const char*> cstrings;
+			for (const auto& compileCommand : compileCommands)
+			{
+				for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
+			}
+			auto& diagnostics = mInstance.getDiagnostics();
+			auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
+			if (invocation) mInstance.setInvocation(invocation.release());
+			else setupBasicLangOptions(options);
+		}
+		else
+		{
+			setupBasicLangOptions(options);
+		}
+	}
+	else
+	{
+		setupBasicLangOptions(options);
+	}
+
+	// Setup target, filemanager and sourcemanager
+	auto targetOptions = std::make_shared<TargetOptions>();
+	targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
+	mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
+	mInstance.createFileManager();
+	mInstance.createSourceManager(mInstance.getFileManager());
+
+	// Create code completion consumer
+	CodeCompleteOptions codeCompleteOptions;
+	codeCompleteOptions.IncludeMacros = options.codeCompleteIncludeMacros;
+	codeCompleteOptions.IncludeCodePatterns = options.codeCompleteIncludeCodePatterns;
+	codeCompleteOptions.IncludeGlobals = options.codeCompleteIncludeGlobals;
+	codeCompleteOptions.IncludeBriefComments = options.codeCompleteIncludeBriefComments;
+	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
+
+	// Setup header search paths
+	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
+	auto& preprocessor = mInstance.getPreprocessor();
+	auto& headerSearch = preprocessor.getHeaderSearchInfo();
+	auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
+	headerSearchOpts.ResourceDir = options.builtinHeaders;
+	std::vector<clang::DirectoryLookup> lookups;
+	auto& fileManager = mInstance.getFileManager();
+	for (const auto standardInclude : options.systemHeaders)
+	{
+		headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
+		lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
+	}
+	headerSearch.SetSearchPaths(lookups, 0, 0, true);
+
+	// Create frontend options
+	auto& frontendOptions = mInstance.getFrontendOpts();
+	frontendOptions.CodeCompletionAt.FileName = mFilename;
+	FrontendInputFile input(mFilename, InputKind::IK_CXX);
+	frontendOptions.Inputs.push_back(input);
+
+	CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
+}
+
 Session::Session(const std::string& filename)
 : mFilename(filename)
 {
 	PythonGILReleaser releaser;
 
-	// DEBUG_PRINT;
 	using namespace clang;
 	using namespace boost;
 
