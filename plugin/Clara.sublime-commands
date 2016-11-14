@@ -1,3 +1,3 @@
 [
-	{ "caption": "Clara: Rename Function Under Cursor", "command": "rename_function" }
+	{ "caption": "Clara: Generate System Headers", "command": "generate_system_headers" }
 ]
