@@ -11,19 +11,10 @@
 	// Standard locations of system headers. You can find these yourself with:
 	// clang++ '-###' -c foo.cpp 2>&1 | tr ' ' '\n' | grep -A1 internal-isystem | awk 'NR % 2 == 0' | sed '$!s/$/,/'
 	// Make sure foo.cpp actually exists.
-	"sytem_headers":
-	[
-		"/usr/include/c++/5.4.0",
-		"/usr/include/x86_64-linux-gnu/c++/5.4.0",
-		"/usr/include/c++/5.4.0/backward",
-		// "/usr/local/include",
-		// "/usr/local/lib/clang/4.0.0/include",
-		"/usr/include/x86_64-linux-gnu",
-		"/usr/include"
-	],
+	"sytem_headers": [],
 
 	// Location of the builtin headers for clang.
-	"builtin_headers": "include",
+	"builtin_headers": "",
 
 	// Turn on logs in console.
 	"debug": true

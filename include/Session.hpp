@@ -2,6 +2,7 @@
 
 #include "CancellableSyntaxOnlyAction.hpp"
 #include "DiagnosticConsumer.hpp"
+#include "SessionOptions.hpp"
 #include <string>
 #include <clang/Frontend/CompilerInstance.h>
 #include <boost/python/list.hpp>
@@ -18,6 +19,8 @@ class Session
 public:
 
 	boost::python::object reporter;
+
+	Session(const SessionOptions& options);
 
 	Session(const std::string& filename);
 
@@ -75,6 +78,8 @@ public:
 	const std::string& getFilename() const noexcept;
 
 private:
+
+	void setupBasicLangOptions(const SessionOptions& options);
 
 	std::string mFilename;
 

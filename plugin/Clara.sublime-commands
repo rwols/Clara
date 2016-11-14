@@ -1,3 +1,5 @@
 [
-	{ "caption": "Clara: Generate System Headers", "command": "generate_system_headers" }
+	{ "caption": "Clara: Generate System Headers", "command": "generate_system_headers" },
+	{ "caption": "Clara: Code Complete at Cursor", "command": "code_complete_at_cursor" },
+	{ "caption": "Clara: Diagnose", "command": "diagnose" }
 ]
