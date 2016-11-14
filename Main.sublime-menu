@@ -1,0 +1,33 @@
+[
+	{
+		"caption": "Preferences",
+		"id": "preferences",
+		"children": 
+		[
+			{
+				"caption": "Package Settings",
+				"id": "package-settings",
+				"children": 
+				[
+					{
+						"caption": "Clara",
+						"id": "clara",
+						"children": 
+						[
+							{
+								"command": "open_file",
+								"args": { "file": "${packages}/Clara/Clara.sublime-settings" },
+								"caption": "Settings - Default"
+							},
+							{
+								"command": "open_file",
+								"args": { "file": "${packages}/User/Clara.sublime-settings"},
+								"caption": "Settings - User"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+]
