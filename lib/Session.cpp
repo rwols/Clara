@@ -69,7 +69,8 @@ void Session::setupBasicLangOptions(const SessionOptions& options)
 }
 
 Session::Session(const SessionOptions& options)
-: mFilename(options.filename)
+: reporter(options.logCallback)
+, mFilename(options.filename)
 {
 	using namespace clang;
 	using namespace clang::tooling;
@@ -80,6 +81,14 @@ Session::Session(const SessionOptions& options)
 	// Setup diagnostics engine
 	mInstance.createDiagnostics();
 
+	{
+		PythonGILEnsurer lock;
+		if (reporter != python::object())
+		{
+			reporter("Attemping to load JSON compilation database.");
+		}
+	}
+	
 	std::string errorMsg;
 	auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
 	if (compdb)
@@ -99,11 +108,21 @@ Session::Session(const SessionOptions& options)
 		}
 		else
 		{
+			PythonGILEnsurer lock;
+			if (reporter != python::object())
+			{
+				reporter("Could not find compile commands.");
+			}
 			setupBasicLangOptions(options);
 		}
 	}
 	else
 	{
+		PythonGILEnsurer lock;
+		if (reporter != python::object())
+		{
+			reporter("Could not load JSON compilation database: " + errorMsg);
+		}
 		setupBasicLangOptions(options);
 	}
 

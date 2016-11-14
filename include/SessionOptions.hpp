@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <boost/python/object.hpp>
 
 #include "DiagnosticConsumer.hpp"
 
@@ -9,6 +10,8 @@ namespace Clara {
 
 struct SessionOptions
 {
+	boost::python::object logCallback;
+	boost::python::object codeCompleteCallback;
 	Clara::DiagnosticConsumer* diagnosticConsumer = nullptr;
 	std::string filename;
 	std::vector<std::string> systemHeaders;

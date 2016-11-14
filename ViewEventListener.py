@@ -29,6 +29,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		claraPrint('Loading Clara session for ' + self.view.file_name())
 		project = self.view.window().project_data()
 		options = SessionOptions()
+		options.logCallback = claraPrint
 		settings = sublime.load_settings('Clara.sublime-settings')
 		options.filename = self.view.file_name()
 		systemHeaders = self._loadHeaders('system_headers')
@@ -51,7 +52,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
 
 		self.session = Session(options)
-		self.session.reporter = claraPrint
 
 	def _loadHeaders(self, key):
 		settings = sublime.load_settings('Clara.sublime-settings')
