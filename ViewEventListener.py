@@ -36,13 +36,16 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		builtinHeaders = self._loadHeaders('builtin_headers')
 		options.systemHeaders = [''] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
+		# if project is None:
+		# if sublime.ok_cancel_dialog('This file has no sublime-project. Do you want to create one now?'):
 		try:
 			if project is None: raise Exception('No sublime-project found.')
 			claraSettings = project.get('clara')
 			if claraSettings is None: raise Exception('No settings found in sublime-project file.')
+			claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
 			cmakeFile = claraSettings.get('cmake_file')
 			buildFolder = claraSettings.get('build_folder')
-			options.jsonCompileCommands = buildFolder
+			options.jsonCompileCommands = "" if buildFolder is None else buildFolder
 		except Exception as e:
 			claraPrint(str(e))
 
@@ -105,10 +108,12 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			col += 1 # clang columns are 1-based, sublime columns are 0-based
 			claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
 			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
-			return self._tempCompletionMessage()
+			self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
+			return None
 
 	def _completionCallback(self, completions):
 		claraPrint('completions are ready, rerunning auto completion')
+		self.view.hide_popup()
 		# claraPrint('note: completions are {}'.format(completions))
 		if len(completions) == 0:
 			claraPrint('no completions were found!')
@@ -118,11 +123,10 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			self.noCompletionsFound = False
 			self.newCompletions = completions
 		self.view.run_command('hide_auto_complete')
-		# self.view.run_command('auto_complete')
 		self.view.run_command('auto_complete', {
 			'disable_auto_insert': True,
-			'api_completions_only': False,
-			'next_competion_if_showing': True})
+			'api_completions_only': True,
+			'next_competion_if_showing': False})
 			
 		
 

@@ -13,6 +13,7 @@ PyObject* CompletionResultListToPythonList::convert(const std::vector<std::pair<
 		toPair.append(fromPair.second);
 		to.append(toPair);
 	}
+
 	return boost::python::incref(to.ptr());;
 }
 

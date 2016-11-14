@@ -88,43 +88,51 @@ Session::Session(const SessionOptions& options)
 			reporter("Attemping to load JSON compilation database.");
 		}
 	}
-	
-	std::string errorMsg;
-	auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
-	if (compdb)
+
+	if (!options.jsonCompileCommands.empty())
 	{
-		auto compileCommands = compdb->getCompileCommands(mFilename);
-		if (!compileCommands.empty())
+		std::string errorMsg;
+		auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
+		if (compdb)
 		{
-			std::vector<const char*> cstrings;
-			for (const auto& compileCommand : compileCommands)
+			auto compileCommands = compdb->getCompileCommands(mFilename);
+			if (!compileCommands.empty())
 			{
-				for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
+				std::vector<const char*> cstrings;
+				for (const auto& compileCommand : compileCommands)
+				{
+					for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
+				}
+				auto& diagnostics = mInstance.getDiagnostics();
+				auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
+				if (invocation) mInstance.setInvocation(invocation.release());
+				else setupBasicLangOptions(options);
 			}
-			auto& diagnostics = mInstance.getDiagnostics();
-			auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
-			if (invocation) mInstance.setInvocation(invocation.release());
-			else setupBasicLangOptions(options);
+			else
+			{
+				PythonGILEnsurer lock;
+				if (reporter != python::object())
+				{
+					reporter("Could not find compile commands.");
+				}
+				setupBasicLangOptions(options);
+			}
 		}
 		else
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object())
 			{
-				reporter("Could not find compile commands.");
+				reporter("Could not load JSON compilation database: " + errorMsg);
 			}
 			setupBasicLangOptions(options);
 		}
 	}
 	else
 	{
-		PythonGILEnsurer lock;
-		if (reporter != python::object())
-		{
-			reporter("Could not load JSON compilation database: " + errorMsg);
-		}
 		setupBasicLangOptions(options);
 	}
+	
 
 	// Setup target, filemanager and sourcemanager
 	auto targetOptions = std::make_shared<TargetOptions>();
