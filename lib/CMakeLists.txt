@@ -1,7 +1,13 @@
 find_package(LLVM REQUIRED)
 find_package(Clang REQUIRED)
-find_package(PythonLibs 3.5 REQUIRED)
-find_package(Boost COMPONENTS python-py35 REQUIRED)
+
+if (APPLE)
+	find_package(Python3 REQUIRED)
+	find_package(Boost COMPONENTS python3 REQUIRED)
+else ()
+	find_package(PythonLibs 3.5 REQUIRED)
+	find_package(Boost COMPONENTS python-py35 REQUIRED)
+endif ()
 
 configure_file(Configuration.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/Configuration.hpp)
 
@@ -20,6 +26,11 @@ set(source_files
 
 add_library(cpp SHARED ${source_files})
 set_target_properties(cpp PROPERTIES PREFIX "")
+
+if (APPLE)
+	set_target_properties(cpp PROPERTIES SUFFIX ".so")
+	target_compile_options(cpp PUBLIC "-fvisibility=hidden")
+endif ()
 
 target_include_directories(cpp PUBLIC ${LLVM_INCLUDE_DIRS})
 target_include_directories(cpp PUBLIC ${Clang_INCLUDE_DIRS})
