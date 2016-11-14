@@ -29,7 +29,7 @@ set_target_properties(cpp PROPERTIES PREFIX "")
 
 if (APPLE)
 	set_target_properties(cpp PROPERTIES SUFFIX ".so")
-	target_compile_options(cpp PUBLIC "-fvisibility=hidden")
+	#target_compile_options(cpp PUBLIC "-fvisibility=hidden")
 endif ()
 
 target_include_directories(cpp PUBLIC ${LLVM_INCLUDE_DIRS})
