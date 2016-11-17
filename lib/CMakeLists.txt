@@ -1,13 +1,6 @@
-find_package(LLVM REQUIRED)
-find_package(Clang REQUIRED)
-
-if (APPLE)
-	find_package(Python3 REQUIRED)
-	find_package(Boost COMPONENTS python3 REQUIRED)
-else ()
-	find_package(PythonLibs 3.5 REQUIRED)
-	find_package(Boost COMPONENTS python-py35 REQUIRED)
-endif ()
+if (NOT LLVM_FOUND)
+	message(FATAL_ERROR "LLVM was not found. Required to build.")
+endif()
 
 configure_file(Configuration.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/Configuration.hpp)
 
@@ -15,22 +8,23 @@ set(source_files
 	CancellableASTConsumer.cpp
 	CancellableSyntaxOnlyAction.cpp
 	CodeCompleteConsumer.cpp
-	CompletionResultListToPythonList.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
-	RenameFunctionASTConsumer.cpp
-	RenameFunctionFrontendAction.cpp
-	RenameFunctionFrontendActionFactory.cpp
-	RenameFunctionVisitor.cpp
+	#RenameFunctionASTConsumer.cpp
+	#RenameFunctionFrontendAction.cpp
+	#RenameFunctionFrontendActionFactory.cpp
+	#RenameFunctionVisitor.cpp
 	Session.cpp)
 
 add_library(cpp SHARED ${source_files})
-set_target_properties(cpp PROPERTIES PREFIX "")
 
 if (APPLE)
 	set_target_properties(cpp PROPERTIES SUFFIX ".so")
-	#target_compile_options(cpp PUBLIC "-fvisibility=hidden")
 endif ()
+set_target_properties(cpp PROPERTIES COMPILE_FLAGS "${LLVM_CXX_FLAGS}")
+set_target_properties(cpp PROPERTIES LINK_FLAGS "${LLVM_LD_FLAGS}")
+set_target_properties(cpp PROPERTIES PREFIX "")
+set_target_properties(cpp PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 target_include_directories(cpp PUBLIC ${LLVM_INCLUDE_DIRS})
 target_include_directories(cpp PUBLIC ${Clang_INCLUDE_DIRS})
@@ -54,4 +48,3 @@ target_link_libraries(cpp PUBLIC ${Boost_LIBRARIES})
 # include(cotire)
 # cotire(cpp)
 
-set_target_properties(cpp PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})

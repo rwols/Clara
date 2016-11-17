@@ -15,7 +15,6 @@ public:
 
 	RenameFunctionFrontendAction() = default;
 	RenameFunctionFrontendAction(clang::Rewriter* rewriter);
-	virtual ~RenameFunctionFrontendAction() noexcept = default;
 	
 	std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
 		clang::CompilerInstance &compiler, 

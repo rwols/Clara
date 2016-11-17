@@ -27,7 +27,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		self.point = -1
 		self.noCompletionsFound = False
 		claraPrint('Loading Clara session for ' + self.view.file_name())
-		project = self.view.window().project_data()
 		options = SessionOptions()
 		options.logCallback = claraPrint
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -36,9 +35,8 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		builtinHeaders = self._loadHeaders('builtin_headers')
 		options.systemHeaders = [''] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
-		# if project is None:
-		# if sublime.ok_cancel_dialog('This file has no sublime-project. Do you want to create one now?'):
 		try:
+			project = self.view.window().project_data()
 			if project is None: raise Exception('No sublime-project found.')
 			claraSettings = project.get('clara')
 			if claraSettings is None: raise Exception('No settings found in sublime-project file.')

@@ -1,19 +1,22 @@
 #include "Session.hpp"
+//#include "RenameFunctionFrontendActionFactory.hpp"
+#include "CodeCompleteConsumer.hpp"
+#include "StringException.hpp"
+#include "CancelException.hpp"
+#include "DiagnosticConsumer.hpp"
+#include "SessionOptions.hpp"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <llvm/Support/CommandLine.h>
+#include <clang/Basic/TargetInfo.h>
+//#include <llvm/Support/CommandLine.h>
 #include <clang/Sema/CodeCompleteConsumer.h>
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Lex/PreprocessorOptions.h>
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Frontend/FrontendActions.h>
-#include <clang/Basic/TargetInfo.h>
-#include "RenameFunctionFrontendActionFactory.hpp"
-#include "CodeCompleteConsumer.hpp"
-#include "StringException.hpp"
-#include "CancelException.hpp"
+
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
@@ -132,7 +135,6 @@ Session::Session(const SessionOptions& options)
 	{
 		setupBasicLangOptions(options);
 	}
-	
 
 	// Setup target, filemanager and sourcemanager
 	auto targetOptions = std::make_shared<TargetOptions>();
@@ -378,10 +380,15 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 
 	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
 	{
+		DEBUG_PRINT;
 		mAction.Execute();
+		DEBUG_PRINT;
 		mAction.EndSourceFile();
+		DEBUG_PRINT;
 		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+		DEBUG_PRINT;
 		consumer->moveResult(result);
+		DEBUG_PRINT;
 	}
 	return result;
 }
@@ -492,5 +499,10 @@ void Session::cancelAsyncCompletion()
 //  });
 //  task.detach(); // bye bye!
 // }
+
+Session::~Session()
+{
+	mInstance.clearOutputFiles(false);
+}
 
 } // namespace Clara

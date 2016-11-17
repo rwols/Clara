@@ -13,5 +13,5 @@ private:
 public:
 	const RenameFunctionVisitor* getVisitor() const;
 	explicit RenameFunctionASTConsumer(clang::CompilerInstance *compiler, clang::Rewriter* rewriter, const std::string& oldName, const std::string& newName);
-	virtual void HandleTranslationUnit(clang::ASTContext& context);
+	void HandleTranslationUnit(clang::ASTContext& context) override;
 };

@@ -1,5 +1,7 @@
-#include "CodeCompleteConsumer.hpp"
 #include <boost/python.hpp>
+#include "CodeCompleteConsumer.hpp"
+
+#define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
 
@@ -8,6 +10,7 @@ CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& opt
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */
+	DEBUG_PRINT;
 }
 
 void CodeCompleteConsumer::ProcessCodeCompleteResults(

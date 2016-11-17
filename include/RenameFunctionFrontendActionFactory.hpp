@@ -12,6 +12,5 @@ public:
 
 	clang::Rewriter* rewriter = nullptr;
 
-	virtual ~RenameFunctionFrontendActionFactory() noexcept = default;
 	clang::FrontendAction* create() override;
 };

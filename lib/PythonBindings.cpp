@@ -1,11 +1,28 @@
+#include <boost/python.hpp>
 #include "Session.hpp"
 #include "DiagnosticConsumer.hpp"
 #include "Configuration.hpp"
-#include "CompletionResultListToPythonList.hpp"
 #include "SessionOptions.hpp"
 #include <clang/Tooling/CompilationDatabase.h>
-#include <boost/python.hpp>
 #include <cassert>
+
+struct CompletionResultListToPythonList
+{
+	static PyObject* convert(const std::vector<std::pair<std::string,std::string>>& from)
+	{
+		boost::python::list to;
+		for (const auto& fromPair : from)
+		{
+			boost::python::list toPair;
+			toPair.append(fromPair.first);
+			toPair.append(fromPair.second);
+			to.append(toPair);
+		}
+
+		return boost::python::incref(to.ptr());;
+	}
+};
+
 
 struct PythonListToStdVectorOfStringsConverter
 {
@@ -83,5 +100,5 @@ BOOST_PYTHON_MODULE(cpp)
 	// Converters
 
 	PythonListToStdVectorOfStringsConverter();
-	to_python_converter<std::vector<std::pair<std::string, std::string>>, Clara::CompletionResultListToPythonList>();
+	to_python_converter<std::vector<std::pair<std::string, std::string>>, CompletionResultListToPythonList>();
 }

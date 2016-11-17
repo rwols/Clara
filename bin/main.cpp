@@ -3,12 +3,26 @@
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include "RenameFunctionFrontendActionFactory.hpp"
-#include "CompletionResultListToPythonList.hpp"
+//#include "CompletionResultListToPythonList.hpp"
 #include "Session.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <fstream>
+
+struct PythonContext
+{
+	PythonContext()
+	{
+		Py_Initialize();
+		PyEval_InitThreads();
+	}
+
+	~PythonContext()
+	{
+		Py_Finalize();
+	}
+};
 
 int main(int argc, const char** argv)
 {
@@ -17,10 +31,8 @@ int main(int argc, const char** argv)
 		std::cerr << "Usage: " << argv[0] << " <file> <line> <column>\n";
 		return EXIT_FAILURE;
 	}
-	
-	
-	Py_Initialize();
-	PyEval_InitThreads();
+
+	PythonContext context;
 
 	boost::python::to_python_converter<std::vector<std::pair<std::string, std::string>>, Clara::CompletionResultListToPythonList>();
 	clang::TextDiagnosticPrinter consumer(llvm::errs(), nullptr);
@@ -30,7 +42,11 @@ int main(int argc, const char** argv)
 	std::unique_ptr<Clara::Session> session;
 	try
 	{
-		session.reset(new Clara::Session(argv[1], "/home/raoul/.config/sublime-text-3/Packages/Clara/build"));
+		#ifdef __APPLE__
+		session.reset(new Clara::Session(consumer, argv[1], "/Users/rwols/Library/Application Support/Sublime Text 3/Packages/clara/build"));
+		#else
+		session.reset(new Clara::Session(consumer, argv[1], "/home/raoul/.config/sublime-text-3/Packages/Clara/build"));
+		#endif
 	}
 	catch (const std::exception& e)
 	{
@@ -51,16 +67,16 @@ int main(int argc, const char** argv)
 		std::cout << message << '\n';
 	});
 
-	boost::python::object callback(+[] (boost::python::list results) -> void
-	{
-		std::cout << "Got results:\n";
-		for (int i = 0; i < boost::python::len(results); ++i)
-		{
-			std::string first = boost::python::extract<std::string>(results[i][0]);
-			std::string second = boost::python::extract<std::string>(results[i][1]);
-			std::cout << first << ", " << second << '\n';
-		}
-	});
+	// boost::python::object callback(+[] (boost::python::list results) -> void
+	// {
+	// 	std::cout << "Got results:\n";
+	// 	for (int i = 0; i < boost::python::len(results); ++i)
+	// 	{
+	// 		std::string first = boost::python::extract<std::string>(results[i][0]);
+	// 		std::string second = boost::python::extract<std::string>(results[i][1]);
+	// 		std::cout << first << ", " << second << '\n';
+	// 	}
+	// });
 
 	std::string unsavedBuffer;
 	{
@@ -71,6 +87,11 @@ int main(int argc, const char** argv)
 	try
 	{
 		std::cout << "Code completing at line " << line << ", column " << column << '\n';
+		auto results = session->codeComplete(unsavedBuffer.c_str(), line, column);
+		for (const auto& result : results)
+		{
+			std::cout << result.first << " => " << result.second << '\n';
+		}
 	}
 	catch (const boost::python::error_already_set& e)
 	{
