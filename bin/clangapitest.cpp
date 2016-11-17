@@ -43,7 +43,6 @@ int main()
 	using namespace clang;
 
 	CompilerInstance instance;
-	instance.createDiagnostics();
 
 	// Setup target, filemanager and sourcemanager
 	auto targetOptions = std::make_shared<TargetOptions>();

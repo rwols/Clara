@@ -1,3 +1,4 @@
+#include <boost/python.hpp>
 #include <llvm/Support/CommandLine.h>
 #include <clang/Tooling/Tooling.h>
 #include <clang/Tooling/CommonOptionsParser.h>
@@ -34,7 +35,7 @@ int main(int argc, const char** argv)
 
 	PythonContext context;
 
-	boost::python::to_python_converter<std::vector<std::pair<std::string, std::string>>, Clara::CompletionResultListToPythonList>();
+	//boost::python::to_python_converter<std::vector<std::pair<std::string, std::string>>, Clara::CompletionResultListToPythonList>();
 	clang::TextDiagnosticPrinter consumer(llvm::errs(), nullptr);
 
 	const int line = std::atoi(argv[2]);

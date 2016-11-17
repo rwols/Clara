@@ -16,8 +16,8 @@ class GenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 		for i, header in enumerate(headers):
 			header = header.strip()
 			if header.endswith(' (framework directory)'):
-    			header = header[:-len(' (framework directory)')]
-    		headers[i] = os.path.abspath(header)
+				header = header[:-len(' (framework directory)')]
+			headers[i] = os.path.abspath(header)
 		output = subprocess.check_output(SHELL_CMD2, shell=True)
 		builtinHeaders = os.path.abspath(output.decode('utf-8').strip())
 		settings = sublime.load_settings(SETTINGS)

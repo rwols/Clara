@@ -70,12 +70,13 @@ BOOST_PYTHON_MODULE(cpp)
 		.def("handleDiagnostic", &Clara::DiagnosticConsumer::handleDiagnostic)
 	;
 
-
 	class_<Clara::SessionOptions>("SessionOptions")
-		.def_readwrite("filename", &Clara::SessionOptions::filename)
-		.def_readwrite("systemHeaders", &Clara::SessionOptions::systemHeaders)
-		.def_readwrite("builtinHeaders", &Clara::SessionOptions::builtinHeaders)
-		.def_readwrite("jsonCompileCommands", &Clara::SessionOptions::jsonCompileCommands)
+		.def_readwrite("logCallback", &Clara::SessionOptions::logCallback, "A callable python object that accepts strings as single argument.")
+		.def_readwrite("codeCompleteCallback", &Clara::SessionOptions::codeCompleteCallback, "A callable python object that accepts a list of pairs of strings.")
+		.def_readwrite("filename", &Clara::SessionOptions::filename, "The filename of the session.")
+		.def_readwrite("systemHeaders", &Clara::SessionOptions::systemHeaders, "The system headers for the session.")
+		.def_readwrite("builtinHeaders", &Clara::SessionOptions::builtinHeaders, "The builtin headers for the session.")
+		.def_readwrite("jsonCompileCommands", &Clara::SessionOptions::jsonCompileCommands, "The directory where the compile commands file resides (in JSON)")
 		.def_readwrite("cxx11", &Clara::SessionOptions::cxx11, "Wether to enable C++11 dialect.")
 		.def_readwrite("cxx14", &Clara::SessionOptions::cxx14, "Wether to enable C++14 dialect.")
 		.def_readwrite("cxx1z", &Clara::SessionOptions::cxx1z, "Wether to enable C++1z dialect.")

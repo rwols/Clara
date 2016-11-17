@@ -79,11 +79,11 @@ Session::Session(const SessionOptions& options)
 	using namespace clang::tooling;
 	using namespace boost;
 
-	PythonGILReleaser releaser;
+	
 
 	// Setup diagnostics engine
 	mInstance.createDiagnostics();
-
+	
 	{
 		PythonGILEnsurer lock;
 		if (reporter != python::object())
@@ -108,8 +108,16 @@ Session::Session(const SessionOptions& options)
 				}
 				auto& diagnostics = mInstance.getDiagnostics();
 				auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
-				if (invocation) mInstance.setInvocation(invocation.release());
-				else setupBasicLangOptions(options);
+				if (invocation)
+				{
+					PythonGILEnsurer lock;
+					reporter("Succesfully loaded compile commands.");
+					mInstance.setInvocation(invocation.release());
+				}
+				else
+				{
+					setupBasicLangOptions(options);
+				}
 			}
 			else
 			{

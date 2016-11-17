@@ -1,8 +1,11 @@
-import sublime, sublime_plugin
+import sublime, sublime_plugin, tempfile
 from .cpp import *
 
 def claraPrint(msg):
 	print('Clara: ' + msg)
+
+def plugin_loaded():
+	claraPrint('Plugin loaded')
 
 class ViewEventListener(sublime_plugin.ViewEventListener):
 	"""Watches views."""
@@ -20,32 +23,36 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def __init__(self, view):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
-		# self.consumer = DiagnosticConsumer()
+		self.phantoms = sublime.PhantomSet(self.view, 'Clara')
 		self.session = None
 		self.newCompletions = None
 		self.oldCompletions = None
 		self.point = -1
 		self.noCompletionsFound = False
-		claraPrint('Loading Clara session for ' + self.view.file_name())
+		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
 		options.logCallback = claraPrint
+		options.codeCompleteCallback = self._completionCallback
 		settings = sublime.load_settings('Clara.sublime-settings')
 		options.filename = self.view.file_name()
 		systemHeaders = self._loadHeaders('system_headers')
 		builtinHeaders = self._loadHeaders('builtin_headers')
 		options.systemHeaders = [''] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
-		try:
-			project = self.view.window().project_data()
-			if project is None: raise Exception('No sublime-project found.')
-			claraSettings = project.get('clara')
-			if claraSettings is None: raise Exception('No settings found in sublime-project file.')
-			claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
-			cmakeFile = claraSettings.get('cmake_file')
-			buildFolder = claraSettings.get('build_folder')
-			options.jsonCompileCommands = "" if buildFolder is None else buildFolder
-		except Exception as e:
-			claraPrint(str(e))
+		if options.filename.endswith('.hpp') or options.filename.endswith('.h'):
+			options.jsonCompileCommands == ""
+		else:
+			try:
+				project = self.view.window().project_data()
+				if project is None: raise Exception('No sublime-project found.')
+				claraSettings = project.get('clara')
+				if claraSettings is None: raise Exception('No settings found in sublime-project file.')
+				claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
+				cmakeFile = claraSettings.get('cmake_file')
+				buildFolder = claraSettings.get('build_folder')
+				options.jsonCompileCommands = "" if buildFolder is None else buildFolder
+			except Exception as e:
+				claraPrint(str(e))
 
 		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
@@ -108,6 +115,22 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
 			self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
 			return None
+
+	# def on_modified_async(self):
+		# sublime.set_timeout(self._runCompilation, 3000)
+		
+
+	# def _runCompilation(self):
+	# 	unsavedBuffer = self.view.substr(sublime.Region(0, self.view.size()))
+	# 	claraPrint('placeholder for running a compilation...')
+		# self.session.compileAsync(unsavedBuffer, self._warningCallback, self._errorCallback, self._doneCompilationCallback)
+
+	def _warningCallback(self, message):
+		claraPrint(message)
+
+	def _errorCallback(self, message):
+		claraPrint(message)
+
 
 	def _completionCallback(self, completions):
 		claraPrint('completions are ready, rerunning auto completion')
