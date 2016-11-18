@@ -1,7 +1,7 @@
 # PLEASE READ!
 #
 # Make sure that the folder that contains this file
-# is placed in the folder /path/to/llvm/tools/clang/tools/extra/
+# is placed in the folder /path/to/llvm/tools/clang/tools
 # Also make sure to enable exceptions and RTTI.
 # You can either do this with ccmake or via the command line.
 # The relevant CMake variables are LLVM_ENABLE_EH and LLVM_ENABLE_RTTI.
@@ -21,6 +21,16 @@
 # set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (APPLE)
+	set(claraInstallFolderPrefix "$ENV{HOME}/Library/Application Support/Sublime Text 3")
+else()
+	set(claraInstallFolderPrefix "$ENV{HOME}/.config/sublime-text-3")
+endif()
+set(claraInstallFolder "${claraInstallFolderPrefix}/Packages/Clara")
+
+mark_as_advanced(claraInstallFolderPrefix)
+mark_as_advanced(claraInstallFolder)
 
 add_subdirectory(plugin)
 add_subdirectory(lib)

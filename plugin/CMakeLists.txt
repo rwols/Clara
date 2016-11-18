@@ -11,8 +11,7 @@ install(FILES
 	OpenClaraSettingsCommand.py
 	ViewEventListener.py
 
-	DESTINATION
-	$ENV{HOME}/.config/sublime-text-3/Packages/Clara)
+	DESTINATION "${claraInstallFolder}")
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 
