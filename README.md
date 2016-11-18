@@ -9,6 +9,7 @@ Semantic C++ code completion for Sublime Text 3
 * `$ cd /path/to/llvm`
 * `$ pushd tools/clang/tools/extra`
 * `$ git clone https://github.com/rwols/clara.git`
+* Edit the CMakeLists.txt file in the current directory by adding the line `add_subdirectory(clara)` to it.
 * `$ popd`
 * `$ mkdir build`
 * `$ cd build`
