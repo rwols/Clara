@@ -79,8 +79,6 @@ Session::Session(const SessionOptions& options)
 	using namespace clang::tooling;
 	using namespace boost;
 
-	
-
 	// Setup diagnostics engine
 	mInstance.createDiagnostics();
 	
@@ -107,7 +105,8 @@ Session::Session(const SessionOptions& options)
 					for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
 				}
 				auto& diagnostics = mInstance.getDiagnostics();
-				auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
+				auto invocation = std::unique_ptr<CompilerInvocation>(
+					createInvocationFromCommandLine(cstrings, &diagnostics));
 				if (invocation)
 				{
 					PythonGILEnsurer lock;

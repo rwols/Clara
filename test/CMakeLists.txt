@@ -1,8 +1,8 @@
 # NOTE: Executables in this directory are for testing
 # purposes for the stuff in ../lib.
 
-add_executable(hello hello.cpp)
-add_executable(test2 test2.cpp)
+# add_executable(hello hello.cpp)
+# add_executable(test2 test2.cpp)
 
 # add_custom_target(TestFile ALL 
 # 	COMMAND ${CMAKE_COMMAND} -E copy test.py ${CMAKE_BINARY_DIR}/lib/ 

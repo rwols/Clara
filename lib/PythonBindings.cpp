@@ -57,45 +57,49 @@ struct PythonListToStdVectorOfStringsConverter
 	}
 };
 
-BOOST_PYTHON_MODULE(cpp)
+BOOST_PYTHON_MODULE(Clara)
 {
 	using namespace boost::python;
+	using namespace Clara;
 
 	PyEval_InitThreads();
 
-	class_<Clara::DiagnosticConsumer>("DiagnosticConsumer")
-		.def("beginSourceFile", &Clara::DiagnosticConsumer::beginSourceFile)
-		.def("endSourceFile", &Clara::DiagnosticConsumer::EndSourceFile)
-		.def("finish", &Clara::DiagnosticConsumer::finish)
-		.def("handleDiagnostic", &Clara::DiagnosticConsumer::handleDiagnostic)
+	class_<DiagnosticConsumer>("DiagnosticConsumer")
+		.def("beginSourceFile",  &DiagnosticConsumer::beginSourceFile)
+		.def("endSourceFile",    &DiagnosticConsumer::EndSourceFile)
+		.def("finish",           &DiagnosticConsumer::finish)
+		.def("handleDiagnostic", &DiagnosticConsumer::handleDiagnostic)
 	;
 
-	class_<Clara::SessionOptions>("SessionOptions")
-		.def_readwrite("logCallback", &Clara::SessionOptions::logCallback, "A callable python object that accepts strings as single argument.")
-		.def_readwrite("codeCompleteCallback", &Clara::SessionOptions::codeCompleteCallback, "A callable python object that accepts a list of pairs of strings.")
-		.def_readwrite("filename", &Clara::SessionOptions::filename, "The filename of the session.")
-		.def_readwrite("systemHeaders", &Clara::SessionOptions::systemHeaders, "The system headers for the session.")
-		.def_readwrite("builtinHeaders", &Clara::SessionOptions::builtinHeaders, "The builtin headers for the session.")
-		.def_readwrite("jsonCompileCommands", &Clara::SessionOptions::jsonCompileCommands, "The directory where the compile commands file resides (in JSON)")
-		.def_readwrite("cxx11", &Clara::SessionOptions::cxx11, "Wether to enable C++11 dialect.")
-		.def_readwrite("cxx14", &Clara::SessionOptions::cxx14, "Wether to enable C++14 dialect.")
-		.def_readwrite("cxx1z", &Clara::SessionOptions::cxx1z, "Wether to enable C++1z dialect.")
-		.def_readwrite("codeCompleteIncludeMacros", &Clara::SessionOptions::codeCompleteIncludeMacros)
-		.def_readwrite("codeCompleteIncludeCodePatterns", &Clara::SessionOptions::codeCompleteIncludeCodePatterns)
-		.def_readwrite("codeCompleteIncludeGlobals", &Clara::SessionOptions::codeCompleteIncludeGlobals)
-		.def_readwrite("codeCompleteIncludeBriefComments", &Clara::SessionOptions::codeCompleteIncludeBriefComments)
+	class_<SessionOptions>("SessionOptions")
+		.def_readwrite("logCallback",                      &SessionOptions::logCallback, "A callable python object that accepts strings as single argument.")
+		.def_readwrite("codeCompleteCallback",             &SessionOptions::codeCompleteCallback, "A callable python object that accepts a list of pairs of strings.")
+		.def_readwrite("filename",                         &SessionOptions::filename, "The filename of the session.")
+		.def_readwrite("systemHeaders",                    &SessionOptions::systemHeaders, "The system headers for the session.")
+		.def_readwrite("builtinHeaders",                   &SessionOptions::builtinHeaders, "The builtin headers for the session.")
+		.def_readwrite("jsonCompileCommands",              &SessionOptions::jsonCompileCommands, "The directory where the compile commands file resides (in JSON)")
+		.def_readwrite("cxx11",                            &SessionOptions::cxx11, "Wether to enable C++11 dialect.")
+		.def_readwrite("cxx14",                            &SessionOptions::cxx14, "Wether to enable C++14 dialect.")
+		.def_readwrite("cxx1z",                            &SessionOptions::cxx1z, "Wether to enable C++1z dialect.")
+		.def_readwrite("codeCompleteIncludeMacros",        &SessionOptions::codeCompleteIncludeMacros)
+		.def_readwrite("codeCompleteIncludeCodePatterns",  &SessionOptions::codeCompleteIncludeCodePatterns)
+		.def_readwrite("codeCompleteIncludeGlobals",       &SessionOptions::codeCompleteIncludeGlobals)
+		.def_readwrite("codeCompleteIncludeBriefComments", &SessionOptions::codeCompleteIncludeBriefComments)
 	;
 
-	class_<Clara::Session, boost::noncopyable>("Session", init<Clara::DiagnosticConsumer&, const std::string&>())
-		.def(init<Clara::DiagnosticConsumer&, const std::string&, const std::string&>())
+	class_<Session, boost::noncopyable>("Session", init<DiagnosticConsumer&, const std::string&>())
+
+		// Constructors
+		.def(init<DiagnosticConsumer&, const std::string&, const std::string&>())
 		.def(init<const std::string&>())
 		.def(init<const std::string&, const std::string&>())
-		.def(init<const Clara::SessionOptions&>())
-		.def_readwrite("reporter", &Clara::Session::reporter)
-		.def("codeComplete", &Clara::Session::codeComplete)
-		.def("codeCompleteAsync", &Clara::Session::codeCompleteAsync)
-		.def("cancelAsyncCompletion", &Clara::Session::cancelAsyncCompletion)
-		.def("filename", &Clara::Session::getFilename, return_value_policy<copy_const_reference>())
+		.def(init<const SessionOptions&>())
+
+		.def_readwrite("reporter",    &Session::reporter)
+		.def("codeComplete",          &Session::codeComplete)
+		.def("codeCompleteAsync",     &Session::codeCompleteAsync)
+		.def("cancelAsyncCompletion", &Session::cancelAsyncCompletion)
+		.def("filename",              &Session::getFilename, return_value_policy<copy_const_reference>())
 	;
 
 	// Converters

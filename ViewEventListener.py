@@ -1,5 +1,5 @@
 import sublime, sublime_plugin, tempfile
-from .cpp import *
+from .Clara import *
 
 def claraPrint(msg):
 	print('Clara: ' + msg)

@@ -3,12 +3,18 @@ Semantic C++ code completion for Sublime Text 3
 
 # Build Notes for Ubuntu
 
+* Make sure you have at least Python 3.3
+* Make sure you have Boost.Python configured for at least Python 3.3
 * Clone LLVM and Clang with SVN.
-* Build LLVM and Clang with RTTI and exceptions enabled.
-** You can do this with ccmake.
-* LLVM and Clang static libraries are built with -fPIC, so you need to build Boost.Python with that option enabled too.
-* As of this writing, strive to use Python 3.3, as that is what Sublime Text 3 uses.
-* It seems to work fine with Python 3.5.
+* `$ cd /path/to/llvm`
+* `$ pushd tools/clang/tools/extra`
+* `$ git clone https://github.com/rwols/clara.git`
+* `$ popd`
+* `$ mkdir build`
+* `$ cd build`
+* `$ cmake .. -DLLVM\_ENABLE\_EH=ON -DLLVM\_ENABLE\_RTTI=ON`
+* `$ make Clara` 
+* This should build a shared library named Clara.so, and all of its dependencies, in the folder lib/
 
 # Build Notes for OSX
 
