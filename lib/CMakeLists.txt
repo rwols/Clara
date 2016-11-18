@@ -39,3 +39,10 @@ set_target_properties(Clara PROPERTIES PREFIX "")
 
 target_include_directories(Clara PUBLIC ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 target_link_libraries(Clara PUBLIC ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+
+install(TARGETS Clara DESTINATION $ENV{HOME}/.config/sublime-text-3/Packages/Clara)
+add_custom_target(ClaraInstall 
+	${CMAKE_COMMAND} 
+	-DBUILD_TYPE=${CMAKE_BUILD_TYPE} 
+	-P ${CMAKE_CURRENT_BINARY_DIR}/cmake_install.cmake) 
+add_dependencies(ClaraInstall Clara ClaraPlugin) 

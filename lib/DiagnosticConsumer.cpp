@@ -9,7 +9,6 @@ void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, cons
 
 void DiagnosticConsumer::EndSourceFile()
 {
-	
 	// do nothing
 }
 
