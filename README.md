@@ -13,7 +13,7 @@ Semantic C++ code completion for Sublime Text 3
 * `$ popd`
 * `$ mkdir build`
 * `$ cd build`
-* `$ cmake .. -DLLVM\_ENABLE\_EH=ON -DLLVM\_ENABLE\_RTTI=ON`
+* `$ cmake .. -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON`
 * `$ make Clara` 
 * This should build a shared library named Clara.so, and all of its dependencies, in the folder lib/
 
