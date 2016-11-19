@@ -9,7 +9,7 @@
 #include <memory>
 #include <iostream>
 
-const char* FILENAME = "/Users/rwols/Library/Application Support/Sublime Text 3/Packages/clara/test/test2.cpp";
+const char* FILENAME = "/home/raoul/dev/llvm/tools/clang/tools/extra/Clara/test/test2.cpp";
 const int ROW = 65;
 const int COL = 10;
 
@@ -43,6 +43,8 @@ int main()
 	using namespace clang;
 
 	CompilerInstance instance;
+
+	instance.createDiagnostics();
 
 	// Setup target, filemanager and sourcemanager
 	auto targetOptions = std::make_shared<TargetOptions>();

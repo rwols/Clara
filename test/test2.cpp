@@ -62,5 +62,7 @@ int main()
 
     SomeStruct asdf2;
 
+    asdf.
+
     return 0;
 }

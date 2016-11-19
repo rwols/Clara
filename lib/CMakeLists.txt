@@ -18,6 +18,7 @@ set(source_files
 	CodeCompleteConsumer.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
+	PythonGILEnsurer.cpp
 	RenameFunctionASTConsumer.cpp
 	RenameFunctionFrontendAction.cpp
 	RenameFunctionFrontendActionFactory.cpp

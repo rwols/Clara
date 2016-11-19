@@ -5,6 +5,7 @@
 #include "CancelException.hpp"
 #include "DiagnosticConsumer.hpp"
 #include "SessionOptions.hpp"
+#include "PythonGILEnsurer.hpp"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -21,20 +22,6 @@
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
-
-class PythonGILEnsurer 
-{
-	PyGILState_STATE mState;
-
-public:
-	
-	PythonGILEnsurer() : mState(PyGILState_Ensure()) {}
-
-	~PythonGILEnsurer() 
-	{
-		PyGILState_Release(mState);
-	}
-};
 
 class PythonGILReleaser
 {
@@ -74,6 +61,7 @@ void Session::setupBasicLangOptions(const SessionOptions& options)
 Session::Session(const SessionOptions& options)
 : reporter(options.logCallback)
 , mFilename(options.filename)
+, mAction(*this)
 {
 	using namespace clang;
 	using namespace clang::tooling;
@@ -110,11 +98,13 @@ Session::Session(const SessionOptions& options)
 				if (invocation)
 				{
 					PythonGILEnsurer lock;
-					reporter("Succesfully loaded compile commands.");
+					if (reporter != python::object()) reporter("Succesfully loaded compile commands.");
 					mInstance.setInvocation(invocation.release());
 				}
 				else
 				{
+					PythonGILEnsurer lock;
+					if (reporter != python::object()) reporter("Compiler invocation failed.");
 					setupBasicLangOptions(options);
 				}
 			}
@@ -156,7 +146,7 @@ Session::Session(const SessionOptions& options)
 	codeCompleteOptions.IncludeCodePatterns = options.codeCompleteIncludeCodePatterns;
 	codeCompleteOptions.IncludeGlobals = options.codeCompleteIncludeGlobals;
 	codeCompleteOptions.IncludeBriefComments = options.codeCompleteIncludeBriefComments;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
+	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 
 	// Setup header search paths
 	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
@@ -184,6 +174,7 @@ Session::Session(const SessionOptions& options)
 
 Session::Session(const std::string& filename)
 : mFilename(filename)
+, mAction(*this)
 {
 	PythonGILReleaser releaser;
 
@@ -211,7 +202,7 @@ Session::Session(const std::string& filename)
 	codeCompleteOptions.IncludeCodePatterns = true;
 	codeCompleteOptions.IncludeGlobals = true;
 	codeCompleteOptions.IncludeBriefComments = true;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
+	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 
 	// Setup header search paths
 	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
@@ -239,6 +230,7 @@ Session::Session(const std::string& filename)
 
 Session::Session(const std::string& filename, const std::string& compileCommandsJson)
 : mFilename(filename)
+, mAction(*this)
 {
 	PythonGILReleaser releaser;
 
@@ -311,7 +303,7 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 	codeCompleteOptions.IncludeCodePatterns = true;
 	codeCompleteOptions.IncludeGlobals = false;
 	codeCompleteOptions.IncludeBriefComments = false;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions));
+	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 
 	// Setup header search paths
 	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
@@ -385,17 +377,33 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 
 	std::vector<std::pair<std::string, std::string>> result;
 
+	{
+		PythonGILEnsurer lock;
+		if (reporter != python::object()) reporter("Preparing completion run");
+	}
+
 	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
 	{
-		DEBUG_PRINT;
+		{
+			PythonGILEnsurer lock;
+			if (reporter != python::object()) reporter("Executing syntax only action");
+		}
 		mAction.Execute();
-		DEBUG_PRINT;
+		{
+			PythonGILEnsurer lock;
+			if (reporter != python::object()) reporter("Finishing syntax only action");
+		}
 		mAction.EndSourceFile();
-		DEBUG_PRINT;
+		{
+			PythonGILEnsurer lock;
+			if (reporter != python::object()) reporter("Moving results");
+		}
 		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
-		DEBUG_PRINT;
 		consumer->moveResult(result);
-		DEBUG_PRINT;
+	}
+	{
+		PythonGILEnsurer lock;
+		if (reporter != python::object()) reporter("Finished completion run");
 	}
 	return result;
 }
