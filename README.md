@@ -7,15 +7,17 @@ Semantic C++ code completion for Sublime Text 3
 * Make sure you have Boost.Python configured for at least Python 3.3
 * Clone LLVM and Clang with SVN.
 * `$ cd /path/to/llvm`
-* `$ pushd tools/clang/tools/extra`
-* `$ git clone https://github.com/rwols/clara.git`
-* Edit the CMakeLists.txt file in the current directory by adding the line `add_subdirectory(clara)` to it.
+* `$ pushd tools/clang/tools`
+* `$ git clone https://github.com/rwols/Clara.git`
+* Edit the CMakeLists.txt file in the current directory by adding the line `add_clang_subdirectory(clara)` to it.
 * `$ popd`
 * `$ mkdir build`
 * `$ cd build`
 * `$ cmake .. -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON`
 * `$ make Clara` 
 * This should build a shared library named Clara.so, and all of its dependencies, in the folder lib/
+* To deploy Clara to Sublime Text's packages' folder, do
+* `$ make ClaraInstall`
 
 # Build Notes for OSX
 

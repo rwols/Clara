@@ -3,11 +3,11 @@ set(LLVM_LINK_COMPONENTS Core Support)
 set(Python_ADDITIONAL_VERSIONS 3.3 3.4 3.5 3.6)
 set(Boost_USE_STATIC_LIBS ON)
 if (APPLE)
-	find_package(Python3 REQUIRED)
+	find_package(PythonLibs 3.3 REQUIRED)
 	find_package(Boost COMPONENTS python3 REQUIRED)
 else ()
 	set(BOOST_ROOT /usr/local)
-	find_package(PythonLibs 3.5 REQUIRED)
+	find_package(PythonLibs 3.3 REQUIRED)
 	# find_package(Python3 REQUIRED)
 	find_package(Boost COMPONENTS python3 REQUIRED)
 endif ()
@@ -41,7 +41,7 @@ set_target_properties(Clara PROPERTIES PREFIX "")
 target_include_directories(Clara PUBLIC ${PYTHON_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
 target_link_libraries(Clara PUBLIC ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
 
-install(TARGETS Clara DESTINATION $ENV{HOME}/.config/sublime-text-3/Packages/Clara)
+install(TARGETS Clara DESTINATION "${claraInstallFolder}")
 add_custom_target(ClaraInstall 
 	${CMAKE_COMMAND} 
 	-DBUILD_TYPE=${CMAKE_BUILD_TYPE} 
