@@ -14,7 +14,7 @@
 	"clara":
 	{
 		"cmake_file": "${project_path}/CMakeLists.txt",
-		"build_folder": "${project_path}/../../../../../build",
+		"build_folder": "${project_path}/../../../../build",
 	},
 	"build_systems":
 	[

@@ -127,6 +127,7 @@ public:
 private:
 
 	void setupBasicLangOptions(const SessionOptions& options);
+	void tryLoadCompilationDatabase(const SessionOptions& options);
 
 	std::string mFilename;
 

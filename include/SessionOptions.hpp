@@ -12,7 +12,7 @@ struct SessionOptions
 {
 	boost::python::object logCallback;
 	boost::python::object codeCompleteCallback;
-	// Clara::DiagnosticConsumer* diagnosticConsumer = nullptr;
+	Clara::DiagnosticConsumer* diagnosticConsumer = nullptr;
 	std::string filename;
 	std::vector<std::string> systemHeaders;
 	std::string builtinHeaders;

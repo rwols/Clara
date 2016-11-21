@@ -58,28 +58,18 @@ void Session::setupBasicLangOptions(const SessionOptions& options)
 	langOptions.CPlusPlus1z = options.cxx14;
 }
 
-Session::Session(const SessionOptions& options)
-: reporter(options.logCallback)
-, mFilename(options.filename)
-, mAction(*this)
+void Session::tryLoadCompilationDatabase(const SessionOptions& options)
 {
+	using namespace boost;
 	using namespace clang;
 	using namespace clang::tooling;
-	using namespace boost;
-
-	// Setup diagnostics engine
-	mInstance.createDiagnostics();
-	
-	{
-		PythonGILEnsurer lock;
-		if (reporter != python::object())
-		{
-			reporter("Attemping to load JSON compilation database.");
-		}
-	}
 
 	if (!options.jsonCompileCommands.empty())
 	{
+		{
+			PythonGILEnsurer lock;
+			if (reporter != python::object()) reporter("Attemping to load JSON compilation database.");
+		}
 		std::string errorMsg;
 		auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
 		if (compdb)
@@ -111,27 +101,43 @@ Session::Session(const SessionOptions& options)
 			else
 			{
 				PythonGILEnsurer lock;
-				if (reporter != python::object())
-				{
-					reporter("Could not find compile commands.");
-				}
+				if (reporter != python::object()) reporter("Could not find compile commands.");
 				setupBasicLangOptions(options);
 			}
 		}
 		else
 		{
 			PythonGILEnsurer lock;
-			if (reporter != python::object())
-			{
-				reporter("Could not load JSON compilation database: " + errorMsg);
-			}
+			if (reporter != python::object()) reporter(errorMsg);
 			setupBasicLangOptions(options);
 		}
 	}
 	else
 	{
+		PythonGILEnsurer lock;
+		if (reporter != python::object()) reporter("No JSON compilation database specified.");
 		setupBasicLangOptions(options);
 	}
+}
+
+Session::Session(const SessionOptions& options)
+: reporter(options.logCallback)
+, mFilename(options.filename)
+, mAction(*this)
+{
+	using namespace clang;
+	using namespace clang::tooling;
+	using namespace boost;
+
+	// Setup diagnostics engine
+	mInstance.createDiagnostics();
+	auto& diagnostics = mInstance.getDiagnostics();
+	if (options.diagnosticConsumer != nullptr)
+	{
+		diagnostics.setClient(const_cast<Clara::DiagnosticConsumer*>(options.diagnosticConsumer), false);
+	}
+
+	tryLoadCompilationDatabase(options);
 
 	// Setup target, filemanager and sourcemanager
 	auto targetOptions = std::make_shared<TargetOptions>();
@@ -151,6 +157,7 @@ Session::Session(const SessionOptions& options)
 	// Setup header search paths
 	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
 	auto& preprocessor = mInstance.getPreprocessor();
+	CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
 	auto& headerSearch = preprocessor.getHeaderSearchInfo();
 	auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
 	headerSearchOpts.ResourceDir = options.builtinHeaders;
@@ -166,10 +173,11 @@ Session::Session(const SessionOptions& options)
 	// Create frontend options
 	auto& frontendOptions = mInstance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.FileName = mFilename;
-	FrontendInputFile input(mFilename, InputKind::IK_CXX);
-	frontendOptions.Inputs.push_back(input);
-
-	CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
+	if (frontendOptions.Inputs.empty())
+	{
+		FrontendInputFile input(mFilename, InputKind::IK_CXX);
+		frontendOptions.Inputs.push_back(input);
+	}
 }
 
 Session::Session(const std::string& filename)
@@ -306,6 +314,7 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 
 	// Setup header search paths
+	CompilerInvocation::setLangDefaults(langOptions, IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
 	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
 	auto& preprocessor = mInstance.getPreprocessor();
 	auto& headerSearch = preprocessor.getHeaderSearchInfo();
@@ -323,10 +332,11 @@ Session::Session(const std::string& filename, const std::string& compileCommands
 	// Create frontend options
 	auto& frontendOptions = mInstance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.FileName = mFilename;
-	FrontendInputFile input(mFilename, InputKind::IK_CXX);
-	frontendOptions.Inputs.push_back(input);
-
-	CompilerInvocation::setLangDefaults(langOptions, IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
+	if (frontendOptions.Inputs.empty())
+	{
+		FrontendInputFile input(mFilename, InputKind::IK_CXX);
+		frontendOptions.Inputs.push_back(input);
+	}
 }
 
 Session::Session(clang::DiagnosticConsumer& diagConsumer, const std::string& filename)
@@ -382,18 +392,19 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 		if (reporter != python::object()) reporter("Preparing completion run");
 	}
 
-	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
+	CancellableSyntaxOnlyAction action(*this);
+	if (action.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
 	{
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object()) reporter("Executing syntax only action");
 		}
-		mAction.Execute();
+		action.Execute();
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object()) reporter("Finishing syntax only action");
 		}
-		mAction.EndSourceFile();
+		action.EndSourceFile();
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object()) reporter("Moving results");

@@ -1,5 +1,6 @@
 import sublime, sublime_plugin, tempfile
 from .Clara import *
+from .DiagnosticPrinter import *
 
 def claraPrint(msg):
 	print('Clara: ' + msg)
@@ -23,6 +24,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def __init__(self, view):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
+		self.diagnosticPrinter = DiagnosticPrinter(claraPrint)
 		self.phantoms = sublime.PhantomSet(self.view, 'Clara')
 		self.session = None
 		self.newCompletions = None
@@ -31,6 +33,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		self.noCompletionsFound = False
 		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
+		options.diagnosticPrinter = self.diagnosticPrinter
 		options.logCallback = claraPrint
 		options.codeCompleteCallback = self._completionCallback
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -78,7 +81,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	# 	If not, construct one."""
 	# 	if self.session is not None: return
 
-
 	def _tempCompletionMessage(self):
 		completions = [['\tPlease wait...', ' ']];
 		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
@@ -125,7 +127,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 
 	# def on_modified_async(self):
 		# sublime.set_timeout(self._runCompilation, 3000)
-		
 
 	# def _runCompilation(self):
 	# 	unsavedBuffer = self.view.substr(sublime.Region(0, self.view.size()))
@@ -137,7 +138,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 
 	def _errorCallback(self, message):
 		claraPrint(message)
-
 
 	def _completionCallback(self, completions):
 		claraPrint('completions are ready, rerunning auto completion')

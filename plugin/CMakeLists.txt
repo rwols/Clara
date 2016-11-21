@@ -4,7 +4,7 @@ install(FILES
 	ClaraInsertDiagnosis.py
 	CodeCompleteAtCursorCommand.py
 	DiagnoseCommand.py
-	DiagnosticConsumer.py
+	DiagnosticPrinter.py
 	EventListener.py
 	GenerateSystemHeadersCommand.py
 	Main.sublime-menu
