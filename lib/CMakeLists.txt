@@ -1,9 +1,10 @@
 set(LLVM_LINK_COMPONENTS Core Support)
-
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_LIST_DIR}/cmake/modules")
 set(Python_ADDITIONAL_VERSIONS 3.3 3.4 3.5 3.6)
 set(Boost_USE_STATIC_LIBS ON)
 if (APPLE)
-	find_package(PythonLibs 3.3 REQUIRED)
+	find_package(Python3 3.3 EXACT REQUIRED)
+	#find_package(PythonLibs 3.3 REQUIRED)
 	find_package(Boost COMPONENTS python3 REQUIRED)
 else ()
 	set(BOOST_ROOT /usr/local)
