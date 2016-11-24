@@ -17,9 +17,10 @@ struct SessionOptions
 	std::vector<std::string> systemHeaders;
 	std::string builtinHeaders;
 	std::string jsonCompileCommands;
-	bool cxx11 = true;
-	bool cxx14 = true;
-	bool cxx1z = false;
+	clang::LangStandard languageStandard;
+	// bool cxx11 = true;
+	// bool cxx14 = true;
+	// bool cxx1z = false;
 	bool codeCompleteIncludeMacros = true;
 	bool codeCompleteIncludeCodePatterns = true;
 	bool codeCompleteIncludeGlobals = true;

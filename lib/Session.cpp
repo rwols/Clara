@@ -48,6 +48,39 @@ const char* standardIncludes[] =
 	"/usr/include"
 };
 
+clang::CompilerInvocation* Session::makeInvocation(const SessionOptions& options) const
+{
+	using namespace clang;
+	auto invocation = new CompilerInvocation();
+	invocation->TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
+	invocation->setLangDefaults(
+		*invocation->getLangOpts(), 
+		IK_CXX, 
+		llvm::Triple(invocation->TargetOpts->Triple), 
+		invocation->getPreprocessorOpts(), 
+		options.languageStandard);
+
+	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
+
+	#ifdef PRINT_HEADER_SEARCH_PATHS
+		headerSearchOpts.Verbose = true;
+	#else
+		headerSearchOpts.Verbose = false;
+	#endif
+
+	headerSearchOpts.UseBuiltinIncludes = true;
+	headerSearchOpts.UseStandardSystemIncludes = true;
+	headerSearchOpts.UseStandardCXXIncludes = true;
+	headerSearchOpts.ResourceDir = options.builtinHeaders;
+
+	for (const auto& systemHeader : options.systemHeaders)
+	{
+		headerSearchOpts.AddPath(systemHeader, frontend::System, false, false);
+	}
+
+	return invocation;
+}
+
 void Session::setupBasicLangOptions(const SessionOptions& options)
 {
 	// Setup language options
@@ -63,6 +96,8 @@ void Session::tryLoadCompilationDatabase(const SessionOptions& options)
 	using namespace boost;
 	using namespace clang;
 	using namespace clang::tooling;
+
+	CompilerInvocation* invocation;
 
 	if (!options.jsonCompileCommands.empty())
 	{
@@ -83,41 +118,41 @@ void Session::tryLoadCompilationDatabase(const SessionOptions& options)
 					for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
 				}
 				auto& diagnostics = mInstance.getDiagnostics();
-				auto invocation = std::unique_ptr<CompilerInvocation>(
-					createInvocationFromCommandLine(cstrings, &diagnostics));
+				invocation = createInvocationFromCommandLine(cstrings, &diagnostics);
 				if (invocation)
 				{
 					PythonGILEnsurer lock;
 					if (reporter != python::object()) reporter("Succesfully loaded compile commands.");
-					mInstance.setInvocation(invocation.release());
 				}
 				else
 				{
 					PythonGILEnsurer lock;
 					if (reporter != python::object()) reporter("Compiler invocation failed.");
-					setupBasicLangOptions(options);
+					invocation = makeInvocation(options);
 				}
 			}
 			else
 			{
 				PythonGILEnsurer lock;
 				if (reporter != python::object()) reporter("Could not find compile commands.");
-				setupBasicLangOptions(options);
+				invocation = makeInvocation(options);
 			}
 		}
 		else
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object()) reporter(errorMsg);
-			setupBasicLangOptions(options);
+			invocation = makeInvocation(options);
 		}
 	}
 	else
 	{
 		PythonGILEnsurer lock;
 		if (reporter != python::object()) reporter("No JSON compilation database specified.");
-		setupBasicLangOptions(options);
+		invocation = makeInvocation(options);
 	}
+
+	mInstance.setInvocation(invocation);
 }
 
 Session::Session(const SessionOptions& options)
@@ -130,21 +165,21 @@ Session::Session(const SessionOptions& options)
 	using namespace boost;
 
 	// Setup diagnostics engine
-	mInstance.createDiagnostics();
-	auto& diagnostics = mInstance.getDiagnostics();
-	if (options.diagnosticConsumer != nullptr)
-	{
-		diagnostics.setClient(const_cast<Clara::DiagnosticConsumer*>(options.diagnosticConsumer), false);
-	}
+	// mInstance.createDiagnostics();
+	// auto& diagnostics = mInstance.getDiagnostics();
+	// if (options.diagnosticConsumer != nullptr)
+	// {
+	// 	diagnostics.setClient(const_cast<Clara::DiagnosticConsumer*>(options.diagnosticConsumer), false);
+	// }
 
 	tryLoadCompilationDatabase(options);
 
 	// Setup target, filemanager and sourcemanager
-	auto targetOptions = std::make_shared<TargetOptions>();
-	targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
-	mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
-	mInstance.createFileManager();
-	mInstance.createSourceManager(mInstance.getFileManager());
+	// auto targetOptions = std::make_shared<TargetOptions>();
+	// targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
+	// mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
+	// mInstance.createFileManager();
+	// mInstance.createSourceManager(mInstance.getFileManager());
 
 	// Create code completion consumer
 	CodeCompleteOptions codeCompleteOptions;
@@ -155,20 +190,20 @@ Session::Session(const SessionOptions& options)
 	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 
 	// Setup header search paths
-	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
-	auto& preprocessor = mInstance.getPreprocessor();
-	CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
-	auto& headerSearch = preprocessor.getHeaderSearchInfo();
-	auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
-	headerSearchOpts.ResourceDir = options.builtinHeaders;
-	std::vector<clang::DirectoryLookup> lookups;
-	auto& fileManager = mInstance.getFileManager();
-	for (const auto standardInclude : options.systemHeaders)
-	{
-		headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
-		lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
-	}
-	headerSearch.SetSearchPaths(lookups, 0, 0, true);
+	// mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
+	// auto& preprocessor = mInstance.getPreprocessor();
+	// CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
+	// auto& headerSearch = preprocessor.getHeaderSearchInfo();
+	// auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
+	// headerSearchOpts.ResourceDir = options.builtinHeaders;
+	// std::vector<clang::DirectoryLookup> lookups;
+	// auto& fileManager = mInstance.getFileManager();
+	// for (const auto standardInclude : options.systemHeaders)
+	// {
+	// 	headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
+	// 	lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
+	// }
+	// headerSearch.SetSearchPaths(lookups, 0, 0, true);
 
 	// Create frontend options
 	auto& frontendOptions = mInstance.getFrontendOpts();
@@ -384,14 +419,11 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 		auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
 		preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
 	}
-
 	std::vector<std::pair<std::string, std::string>> result;
-
 	{
 		PythonGILEnsurer lock;
 		if (reporter != python::object()) reporter("Preparing completion run");
 	}
-
 	CancellableSyntaxOnlyAction action(*this);
 	if (action.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
 	{
