@@ -1,12 +1,15 @@
 #include <boost/python.hpp>
 #include "CodeCompleteConsumer.hpp"
+#include "Session.hpp"
+#include "PythonGILEnsurer.hpp"
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
 
-CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options)
+CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, Session& owner)
 : clang::CodeCompleteConsumer(options, false)
+, mOwner(owner)
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */
@@ -53,6 +56,14 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 	std::pair<std::string, std::string> pair;
 	std::string first, second, informative;
 	unsigned argCount = 0;
+
+	{
+		PythonGILEnsurer lock;
+		if (mOwner.reporter != python::object())
+		{
+			mOwner.reporter("Processing completion ...");
+		}
+	}
 
 	switch (result.Kind) 
 	{
@@ -120,6 +131,15 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 
 	pair.first = std::move(first);
 	pair.second = std::move(second);
+
+	{
+		PythonGILEnsurer lock;
+		if (mOwner.reporter != python::object())
+		{
+			mOwner.reporter("Completion: " + pair.second);
+		}
+	}
+
 	return pair;
 }
 

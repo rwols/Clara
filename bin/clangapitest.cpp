@@ -1,94 +1,105 @@
 #include <clang/Frontend/CompilerInstance.h>
-#include <clang/Sema/CodeCompleteConsumer.h>
-#include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Lex/PreprocessorOptions.h>
-#include <clang/Lex/Preprocessor.h>
-#include <clang/Lex/HeaderSearch.h>
 #include <clang/Frontend/FrontendActions.h>
-#include <clang/Basic/TargetInfo.h>
-#include <memory>
 #include <iostream>
 
-const char* FILENAME = "/Users/rwols/Library/Application Support/Sublime Text 3/Packages/clara/test/test2.cpp";
-const int ROW = 65;
-const int COL = 10;
+// The filename that will be processed (twice).
+static const char* FILENAME = "simple.cpp";
 
-#ifdef __APPLE__
-
-const char* standardIncludes[] =
-{
-	"/usr/include/c++/4.2.1/",
-	"/usr/include",
-	"/usr/local/include",
-	"/usr/local/lib/clang/4.0.0/include/"
-};
-
-#else
-
-const char* standardIncludes[] =
+// System header locations, you may need to
+// adjust these.
+static const char* SYSTEM_HEADERS[] =
 {
 	"/usr/include/c++/5.4.0",
 	"/usr/include/x86_64-linux-gnu/c++/5.4.0",
 	"/usr/include/c++/5.4.0/backward",
-	"/usr/local/include",
 	"/usr/local/lib/clang/4.0.0/include",
 	"/usr/include/x86_64-linux-gnu",
 	"/usr/include"
 };
 
-#endif
+// Location for builtin headers. You may need to
+// adjust this.
+static const char* RESOURCE_DIR = "/usr/local/lib/clang/4.0.0";
+
+// Uncomment this to see header search paths.
+// #define PRINT_HEADER_SEARCH_PATHS
+
+// Constructs a CompilerInvocation
+// that must be fed to a CompilerInstance.
+clang::CompilerInvocation* makeInvocation();
+
+// Executes a single SyntaxOnlyAction on
+// the given CompilerInstance.
+void secondCallThisFunctionFails(clang::CompilerInstance& instance);
 
 int main()
 {
 	using namespace clang;
 
 	CompilerInstance instance;
+	
+	instance.createDiagnostics();
 
-	// Setup target, filemanager and sourcemanager
-	auto targetOptions = std::make_shared<TargetOptions>();
-	targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
-	instance.setTarget(TargetInfo::CreateTargetInfo(instance.getDiagnostics(), targetOptions));
-	instance.createFileManager();
-	instance.createSourceManager(instance.getFileManager());
-	CompilerInvocation::setLangDefaults(instance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), instance.getPreprocessorOpts());
+	instance.setInvocation(makeInvocation());
+	instance.getFrontendOpts().Inputs.emplace_back
+	(
+		FILENAME, 
+		FrontendOptions::getInputKindForExtension(FILENAME)
+	);
 
-	// Create code completion consumer
-	CodeCompleteOptions codeCompleteOptions;
-	codeCompleteOptions.IncludeMacros = false;
-	codeCompleteOptions.IncludeCodePatterns = false;
-	codeCompleteOptions.IncludeGlobals = false;
-	codeCompleteOptions.IncludeBriefComments = false;
-	instance.setCodeCompletionConsumer(new PrintingCodeCompleteConsumer(codeCompleteOptions, llvm::outs()));
+	// First call is OK.
+	secondCallThisFunctionFails(instance);
 
-	// Setup header search paths
-	instance.createPreprocessor(TranslationUnitKind::TU_Complete);
-	auto& preprocessor = instance.getPreprocessor();
-	auto& headerSearch = preprocessor.getHeaderSearchInfo();
-	auto& headerSearchOpts = instance.getHeaderSearchOpts();
-	headerSearchOpts.ResourceDir = "/usr/local/lib/clang/4.0.0/include/";
-	std::vector<DirectoryLookup> lookups;
-	auto& fileManager = instance.getFileManager();
-	for (const auto standardInclude : standardIncludes)
-	{
-		headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
-		lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
-	}
-	headerSearch.SetSearchPaths(lookups, 0, 0, true);
-
-	auto& frontendOptions = instance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.Line = ROW;
-	frontendOptions.CodeCompletionAt.Column = COL;
-	frontendOptions.CodeCompletionAt.FileName = FILENAME;
-	FrontendInputFile input(FILENAME, InputKind::IK_CXX);
-	frontendOptions.Inputs.push_back(input);
-
-	SyntaxOnlyAction action;
-	std::vector<std::pair<std::string, std::string>> results;
-	if (action.BeginSourceFile(instance, frontendOptions.Inputs[0]))
-	{
-		action.Execute();
-		action.EndSourceFile();
-	}
+	// Second call results in assertion failures.
+	secondCallThisFunctionFails(instance);
 
 	return 0;
+}
+
+clang::CompilerInvocation* makeInvocation()
+{
+	using namespace clang;
+	auto invocation = new CompilerInvocation();
+
+	invocation->TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
+	invocation->setLangDefaults(
+		*invocation->getLangOpts(), 
+		IK_CXX, 
+		llvm::Triple(invocation->TargetOpts->Triple), 
+		invocation->getPreprocessorOpts(), 
+		LangStandard::lang_cxx11);
+
+	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
+
+	#ifdef PRINT_HEADER_SEARCH_PATHS
+		headerSearchOpts.Verbose = true;
+	#else
+		headerSearchOpts.Verbose = false;
+	#endif
+
+	headerSearchOpts.UseBuiltinIncludes = true;
+	headerSearchOpts.UseStandardSystemIncludes = true;
+	headerSearchOpts.UseStandardCXXIncludes = true;
+	headerSearchOpts.ResourceDir = RESOURCE_DIR;
+
+	for (const auto sytemHeader : SYSTEM_HEADERS)
+	{
+		headerSearchOpts.AddPath(sytemHeader, frontend::System, false, false);
+	}
+
+	return invocation;
+}
+
+void secondCallThisFunctionFails(clang::CompilerInstance& instance)
+{
+	using namespace clang;
+	SyntaxOnlyAction action;
+	if (instance.ExecuteAction(action))
+	{
+		std::cout << "Action succeeded.\n";
+	}
+	else
+	{
+		std::cout << "Action failed.\n";
+	}
 }

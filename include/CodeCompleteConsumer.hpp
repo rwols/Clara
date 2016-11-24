@@ -7,13 +7,15 @@
 
 namespace Clara {
 
+class Session; // forward declaration
+
 class CodeCompleteConsumer : public clang::CodeCompleteConsumer 
 {
 public:
 
 	bool includeOptionalArguments = true;
 
-	CodeCompleteConsumer(const clang::CodeCompleteOptions& options);
+	CodeCompleteConsumer(const clang::CodeCompleteOptions& options, Session& owner);
 
 	void ProcessCodeCompleteResults(
 		clang::Sema &sema, 
@@ -36,6 +38,8 @@ public:
 	void clearResult();
 
 private:
+
+	Session& mOwner;
 
 	clang::CodeCompletionTUInfo mCCTUInfo;
 

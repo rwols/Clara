@@ -9,7 +9,7 @@ namespace Clara {
 CancellableASTConsumer::CancellableASTConsumer(CancellableSyntaxOnlyAction& creator)
 : mCreator(creator)
 {
-	std::lock_guard<std::mutex> lock(creator.mCancelMutex);
+	std::lock_guard<std::mutex> lock(mCreator.mCancelMutex);
 	mCreator.mConsumer = this;
 }
 
@@ -24,6 +24,7 @@ CancellableASTConsumer::~CancellableASTConsumer() noexcept
 
 bool CancellableASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef declGroup)
 {
+	std::lock_guard<std::mutex> lock(mCreator.mCancelMutex);
 	// std::unique_lock<std::mutex> lock(mCreator.mCancelMutex);
 	if (mCreator.mPleaseCancel)
 	{

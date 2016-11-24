@@ -6,10 +6,13 @@
 namespace Clara {
 
 class CancellableASTConsumer;
+class Session;
 	
 class CancellableSyntaxOnlyAction : public clang::SyntaxOnlyAction
 {
 public:
+
+	CancellableSyntaxOnlyAction(Session& owner);
 
 	/**
 	 * @brief      Blocks until the action is cancelled.
@@ -26,6 +29,7 @@ private:
 
 	friend class CancellableASTConsumer;
 
+	Session& mOwner;
 	std::condition_variable mCancelVar;
 	std::mutex mCancelMutex;
 	bool mPleaseCancel = false;
