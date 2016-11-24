@@ -128,6 +128,7 @@ private:
 
 	void setupBasicLangOptions(const SessionOptions& options);
 	void tryLoadCompilationDatabase(const SessionOptions& options);
+	clang::CompilerInvocation* makeInvocation(const SessionOptions& options) const;
 
 	std::string mFilename;
 

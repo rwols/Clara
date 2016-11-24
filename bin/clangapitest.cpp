@@ -32,8 +32,12 @@ clang::CompilerInvocation* makeInvocation();
 // the given CompilerInstance.
 void secondCallThisFunctionFails(clang::CompilerInstance& instance);
 
+void makeInstanceAndExecuteAction();
+
 int main()
 {
+	// makeInstanceAndExecuteAction();
+	// makeInstanceAndExecuteAction();
 	using namespace clang;
 
 	CompilerInstance instance;
@@ -93,6 +97,8 @@ clang::CompilerInvocation* makeInvocation()
 void secondCallThisFunctionFails(clang::CompilerInstance& instance)
 {
 	using namespace clang;
+	instance.setSourceManager(nullptr);
+	instance.createDiagnostics();
 	SyntaxOnlyAction action;
 	if (instance.ExecuteAction(action))
 	{
@@ -102,4 +108,23 @@ void secondCallThisFunctionFails(clang::CompilerInstance& instance)
 	{
 		std::cout << "Action failed.\n";
 	}
+}
+
+void makeInstanceAndExecuteAction()
+{
+	using namespace clang;
+
+	CompilerInstance instance;
+	
+	instance.createDiagnostics();
+
+	instance.setInvocation(makeInvocation());
+	instance.getFrontendOpts().Inputs.emplace_back
+	(
+		FILENAME, 
+		FrontendOptions::getInputKindForExtension(FILENAME)
+	);
+
+	// First call is OK.
+	secondCallThisFunctionFails(instance);
 }
