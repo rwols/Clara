@@ -62,7 +62,7 @@ BOOST_PYTHON_MODULE(Clara)
 	using namespace boost::python;
 	using namespace Clara;
 
-	PyEval_InitThreads();
+	// PyEval_InitThreads();
 
 	class_<DiagnosticConsumer>("DiagnosticConsumer")
 		.def("beginSourceFile",  &DiagnosticConsumer::beginSourceFile)

@@ -289,8 +289,6 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
 				informative += chunk.Text;
 				second += chunk.Text;
 				break;
-			default:
-				break;
 		}
 	}
 
