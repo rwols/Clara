@@ -52,8 +52,8 @@ Software.
 The following pieces of software have additional or alternate copyrights,
 licenses, and/or restrictions:
 
-Library             Directory
--------             ---------
-LLVM                ../../..
-Clang               ..
-pybind11            lib/pybind11
+|   Library   |   Directory  |
+|:-----------:|:------------:|
+| LLVM        |  ../../..    |
+| Clang       |  ..          |
+| pybind11    | lib/pybind11 |
