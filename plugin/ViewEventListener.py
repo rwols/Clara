@@ -40,7 +40,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		options.filename = self.view.file_name()
 		systemHeaders = self._loadHeaders('system_headers')
 		builtinHeaders = self._loadHeaders('builtin_headers')
-		options.systemHeaders = [''] if systemHeaders is None else systemHeaders
+		options.systemHeaders = [""] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
 		if options.filename.endswith('.hpp') or options.filename.endswith('.h'):
 			options.jsonCompileCommands == ""

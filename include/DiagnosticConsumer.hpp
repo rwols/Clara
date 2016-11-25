@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/python.hpp>
+#include <pybind11/pybind11.h>
 #include <clang/Basic/Diagnostic.h>
 
 namespace Clara {
@@ -15,7 +15,7 @@ public:
 	void HandleDiagnostic(clang::DiagnosticsEngine::Level level, const clang::Diagnostic& info) override;
 
 	virtual void beginSourceFile();
-	virtual void handleDiagnostic(clang::DiagnosticsEngine::Level level, boost::python::list info);
+	virtual void handleDiagnostic(clang::DiagnosticsEngine::Level level, pybind11::list info);
 };
 
 } // namespace Clara

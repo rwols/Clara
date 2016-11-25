@@ -1,4 +1,5 @@
 #include "DiagnosticConsumer.hpp"
+#include <pybind11/stl.h>
 
 namespace Clara {
 
@@ -25,28 +26,27 @@ bool DiagnosticConsumer::IncludeInDiagnosticCounts() const
 
 void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, const clang::Diagnostic& info)
 {
-	boost::python::list result;
+	pybind11::list result;
 	for (unsigned i = 0; i < info.getNumArgs(); ++i)
 	{
 		switch (info.getArgKind(i))
 		{
 			case clang::DiagnosticsEngine::ak_std_string:
-				result.append(info.getArgStdStr(i));
+				result.append(pybind11::cast(info.getArgStdStr(i)));
 				break;
 			case clang::DiagnosticsEngine::ak_c_string:
-				result.append(info.getArgCStr(i));
+				result.append(pybind11::cast(info.getArgCStr(i)));
 				break;
 			case clang::DiagnosticsEngine::ak_sint:
-				result.append(info.getArgSInt(i));
+				result.append(pybind11::cast(info.getArgSInt(i)));
 				break;
 			case clang::DiagnosticsEngine::ak_uint:
-				result.append(info.getArgUInt(i));
+				result.append(pybind11::cast(info.getArgUInt(i)));
 				break;
 			default:
-				result.append("unkown type");
+				result.append(pybind11::cast("unkown type"));
 				break;
 		}
-		result.append(info.getArgStdStr(i));
 	}
 	handleDiagnostic(level, result);
 }
@@ -56,7 +56,7 @@ void DiagnosticConsumer::beginSourceFile()
 	// do nothing
 }
 
-void DiagnosticConsumer::handleDiagnostic(clang::DiagnosticsEngine::Level level, boost::python::list info)
+void DiagnosticConsumer::handleDiagnostic(clang::DiagnosticsEngine::Level level, pybind11::list info)
 {
 	// do nothing
 }

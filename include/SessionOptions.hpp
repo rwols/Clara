@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <string>
-#include <boost/python/object.hpp>
+#include <pybind11/pybind11.h>
 #include <iosfwd>
 #include <clang/Frontend/LangStandard.h>
 
@@ -12,8 +12,8 @@ class DiagnosticConsumer;
 
 struct SessionOptions
 {
-	boost::python::object logCallback;
-	boost::python::object codeCompleteCallback;
+	pybind11::object logCallback;
+	pybind11::object codeCompleteCallback;
 	Clara::DiagnosticConsumer* diagnosticConsumer = nullptr;
 	std::string filename;
 	std::vector<std::string> systemHeaders;

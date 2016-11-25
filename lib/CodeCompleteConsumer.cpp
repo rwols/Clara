@@ -1,4 +1,4 @@
-#include <boost/python.hpp>
+#include <pybind11/pybind11.h>
 #include "CodeCompleteConsumer.hpp"
 #include "Session.hpp"
 #include "PythonGILEnsurer.hpp"
@@ -50,20 +50,13 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 	clang::CodeCompletionContext context,
 	clang::CodeCompletionResult& result)
 {
-	using namespace boost;
 	using namespace clang;
 
 	std::pair<std::string, std::string> pair;
 	std::string first, second, informative;
 	unsigned argCount = 0;
 
-	{
-		PythonGILEnsurer lock;
-		if (mOwner.reporter != python::object())
-		{
-			mOwner.reporter("Processing completion ...");
-		}
-	}
+	mOwner.report("Processing completion...");
 
 	switch (result.Kind) 
 	{
@@ -131,15 +124,10 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 
 	pair.first = std::move(first);
 	pair.second = std::move(second);
-
 	{
-		PythonGILEnsurer lock;
-		if (mOwner.reporter != python::object())
-		{
-			mOwner.reporter("Completion: " + pair.second);
-		}
+		std::string msg = "Completion: " + pair.second;
+		mOwner.report(msg.c_str());
 	}
-
 	return pair;
 }
 

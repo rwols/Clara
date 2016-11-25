@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SessionOptions.hpp"
-// #include <boost/python/object.hpp>
 #include <string>
 #include <clang/Frontend/CompilerInstance.h>
 #include <functional>
@@ -18,7 +17,7 @@ class Session
 {
 public:
 
-	boost::python::object reporter;
+	pybind11::object reporter;
 
 	/**
 	 * @brief      Constructs a new session.
@@ -108,7 +107,7 @@ public:
 	 * @param[in]  column         Clang columns are 1-based, not 0-based.
 	 * @param[in]  callback       A callable python object that receives a list of string pairs.
 	 */
-	void codeCompleteAsync(const char* unsavedBuffer, int row, int column, boost::python::object callback);
+	void codeCompleteAsync(const char* unsavedBuffer, int row, int column, pybind11::object callback);
 
 
 	/**
@@ -127,6 +126,7 @@ public:
 private:
 
 	friend class CancellableSyntaxOnlyAction;
+	friend class CodeCompleteConsumer;
 
 	void loadFromOptions();
 	clang::CompilerInvocation* makeInvocation() const;

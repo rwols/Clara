@@ -1,5 +1,4 @@
 #include "Session.hpp"
-//#include "RenameFunctionFrontendActionFactory.hpp"
 #include "CodeCompleteConsumer.hpp"
 #include "StringException.hpp"
 #include "CancelException.hpp"
@@ -10,7 +9,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <clang/Basic/TargetInfo.h>
-//#include <llvm/Support/CommandLine.h>
 #include <clang/Sema/CodeCompleteConsumer.h>
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Lex/PreprocessorOptions.h>
@@ -54,7 +52,6 @@ Session::Session(const SessionOptions& options)
 , mFilename(options.filename)
 , mAction(*this)
 {
-	using namespace boost;
 	using namespace clang;
 	using namespace clang::tooling;
 	mInstance.createDiagnostics();
@@ -104,7 +101,6 @@ clang::CompilerInvocation* Session::makeInvocation() const
 
 void Session::loadFromOptions()
 {
-	using namespace boost;
 	using namespace clang;
 	using namespace clang::tooling;
 
@@ -145,8 +141,7 @@ void Session::loadFromOptions()
 		}
 		else
 		{
-			PythonGILEnsurer lock;
-			if (reporter != python::object()) reporter(errorMsg);
+			report(errorMsg.c_str());
 			invocation = makeInvocation();
 		}
 	}
@@ -162,7 +157,6 @@ void Session::loadFromOptions()
 void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
-	using namespace boost;
 	report("Preparing completion run.");
 	// PythonGILReleaser guard;
 	mAction.cancel(); // Blocks until a concurrently running action has stopped.
@@ -183,7 +177,6 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
-	using namespace boost;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
 	if (mInstance.ExecuteAction(mAction))
@@ -195,10 +188,9 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 	return result;
 }
 
-void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, boost::python::object callback)
+void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
-	using namespace boost;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::thread task( [=] () -> void
 	{
@@ -220,27 +212,6 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 
 	});
 	task.detach();
-	// if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
-	// {
-	// 	std::thread task( [=] () -> void
-	// 	{
-	// 		try
-	// 		{
-	// 			std::vector<std::pair<std::string, std::string>> result;
-	// 			mAction.Execute();
-	// 			mAction.EndSourceFile();
-	// 			auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
-	// 			consumer->moveResult(result);
-	// 			PythonGILEnsurer pythonLock;
-	// 			callback(result);
-	// 		}
-	// 		catch (const CancelException& e)
-	// 		{
-	// 			mAction.EndSourceFile();
-	// 		}
-	// 	});
-	// 	task.detach();
-	// }
 }
 
 const std::string& Session::getFilename() const noexcept
@@ -256,7 +227,7 @@ void Session::cancelAsyncCompletion()
 void Session::report(const char* message)
 {
 	PythonGILEnsurer lock;
-	if (message != nullptr && reporter != boost::python::object())
+	if (message != nullptr && reporter != pybind11::object())
 		reporter(message);
 }
 
