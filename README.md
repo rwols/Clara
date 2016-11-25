@@ -1,10 +1,10 @@
 # Clara
 Semantic C++ code completion for Sublime Text 3
 
-# Build Notes for Ubuntu
+# Build Notes for Ubuntu / OSX
 
 * Make sure you have at least Python 3.3
-* Make sure you have Boost.Python configured for at least Python 3.3
+* Make sure you have CMake.
 * Clone LLVM and Clang with SVN.
 * `$ cd /path/to/llvm`
 * `$ pushd tools/clang/tools`
@@ -18,12 +18,6 @@ Semantic C++ code completion for Sublime Text 3
 * This should build a shared library named Clara.so, and all of its dependencies, in the folder lib/
 * To deploy Clara to Sublime Text's packages' folder, do
 * `$ make ClaraInstall`
-
-# Build Notes for OSX
-
-* As above, clone LLVM and Clang, build them with RTTI and exceptions enabled.
-* Download Boost sources and build (only) Boost.Python with Python3 support and -fPIC compiler flag.
-* As of this writing, you'll get a crash on startup relating to python threads and/or dydl loading.
 
 # User Guide
 

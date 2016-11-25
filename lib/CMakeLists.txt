@@ -23,7 +23,7 @@ set(PYBIND11_PYTHON_VERSION 3.3)
 set(PYTHON_EXECUTABLE python${PYBIND11_PYTHON_VERSION})
 add_subdirectory(pybind11)
 pybind11_add_module(Clara ${source_files})
-target_link_libraries(Clara clangFrontend clangTooling)
+target_link_libraries(Clara LINK_PRIVATE clangFrontend clangTooling)
 install(TARGETS Clara DESTINATION "${claraInstallFolder}")
 add_custom_target(ClaraInstall 
 	${CMAKE_COMMAND} 

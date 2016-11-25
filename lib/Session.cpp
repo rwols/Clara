@@ -158,7 +158,6 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 {
 	using namespace clang;
 	report("Preparing completion run.");
-	// PythonGILReleaser guard;
 	mAction.cancel(); // Blocks until a concurrently running action has stopped.
 	loadFromOptions();
 	mInstance.setSourceManager(nullptr);
@@ -177,6 +176,7 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
+	PythonGILReleaser guard;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
 	if (mInstance.ExecuteAction(mAction))
@@ -191,15 +191,16 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
+	PythonGILReleaser guard;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::thread task( [=] () -> void
 	{
-		std::vector<std::pair<std::string, std::string>> result;
 		try
 		{
 			if (mInstance.ExecuteAction(mAction))
 			{
 				auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+				std::vector<std::pair<std::string, std::string>> result;
 				consumer->moveResult(result);
 				PythonGILEnsurer pythonLock;
 				callback(result);
@@ -207,7 +208,7 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 		}
 		catch (const CancelException& /*exception*/)
 		{
-			// do nothing
+			report("Async completion was cancelled.");
 		}
 
 	});
@@ -226,9 +227,9 @@ void Session::cancelAsyncCompletion()
 
 void Session::report(const char* message)
 {
+	if (message == nullptr) return;
 	PythonGILEnsurer lock;
-	if (message != nullptr && reporter != pybind11::object())
-		reporter(message);
+	if (reporter != pybind11::object()) reporter(message);
 }
 
 Session::~Session()
