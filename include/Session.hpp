@@ -1,6 +1,7 @@
 #pragma once
 
-#include <boost/python/object.hpp>
+#include "SessionOptions.hpp"
+// #include <boost/python/object.hpp>
 #include <string>
 #include <clang/Frontend/CompilerInstance.h>
 #include <functional>
@@ -8,7 +9,6 @@
 
 namespace Clara {
 
-struct SessionOptions; // forward declaration.
 class DiagnosticConsumer; // forward declaration.
 
 /**
@@ -27,57 +27,57 @@ public:
 	 */
 	Session(const SessionOptions& options);
 
-	/**
-	 * @brief      Constructs a new session from a filename, without compile commands.
-	 *
-	 * @param[in]  filename  The filename
-	 */
-	Session(const std::string& filename);
+	// /**
+	//  * @brief      Constructs a new session from a filename, without compile commands.
+	//  *
+	//  * @param[in]  filename  The filename
+	//  */
+	// Session(const std::string& filename);
 
-	/**
-	 * @brief      Constructs a new session from a filename, with compile commands.
-	 *
-	 * @param[in]  filename             The filename
-	 * @param[in]  compileCommandsJson  The directory that contains the "compile_commands.json" file.
-	 */
-	Session(const std::string& filename, const std::string& compileCommandsJson);
+	// /**
+	//  * @brief      Constructs a new session from a filename, with compile commands.
+	//  *
+	//  * @param[in]  filename             The filename
+	//  * @param[in]  compileCommandsJson  The directory that contains the "compile_commands.json" file.
+	//  */
+	// Session(const std::string& filename, const std::string& compileCommandsJson);
 
-	/**
-	 * @brief      Constructs a session with a custom diagnostic consumer.
-	 *
-	 * @param      consumer  The consumer
-	 * @param[in]  filename  The filename
-	 */
-	Session(clang::DiagnosticConsumer& consumer, const std::string& filename);
+	// /**
+	//  * @brief      Constructs a session with a custom diagnostic consumer.
+	//  *
+	//  * @param      consumer  The consumer
+	//  * @param[in]  filename  The filename
+	//  */
+	// Session(clang::DiagnosticConsumer& consumer, const std::string& filename);
 
-	/**
-	 * @brief      Constructs a session with a custom diagnostic consumer.
-	 *
-	 * @param      consumer             The consumer
-	 * @param[in]  filename             The filename
-	 * @param[in]  compileCommandsJson  The compile commands json
-	 */
-	Session(clang::DiagnosticConsumer& consumer, const std::string& filename, const std::string& compileCommandsJson);
+	// *
+	//  * @brief      Constructs a session with a custom diagnostic consumer.
+	//  *
+	//  * @param      consumer             The consumer
+	//  * @param[in]  filename             The filename
+	//  * @param[in]  compileCommandsJson  The compile commands json
+	 
+	// Session(clang::DiagnosticConsumer& consumer, const std::string& filename, const std::string& compileCommandsJson);
 
-	/**
-	 * @brief      Constructs a single file session.
-	 *
-	 * @param      consumer  The consumer
-	 * @param[in]  filename  The filename
-	 */
-	Session(Clara::DiagnosticConsumer& consumer, const std::string& filename);
+	// /**
+	//  * @brief      Constructs a single file session.
+	//  *
+	//  * @param      consumer  The consumer
+	//  * @param[in]  filename  The filename
+	//  */
+	// Session(Clara::DiagnosticConsumer& consumer, const std::string& filename);
 
 
-	/**
-	 * @brief      Constructs a single file sesssion with the given compile
-	 *             commands.
-	 *
-	 * @param      consumer             The consumer
-	 * @param[in]  filename             The filename
-	 * @param[in]  compileCommandsJson  The compile commands in JSON format spit
-	 *                                  out by CMake.
-	 */
-	Session(Clara::DiagnosticConsumer& consumer, const std::string& filename, const std::string& compileCommandsJson);
+	// /**
+	//  * @brief      Constructs a single file sesssion with the given compile
+	//  *             commands.
+	//  *
+	//  * @param      consumer             The consumer
+	//  * @param[in]  filename             The filename
+	//  * @param[in]  compileCommandsJson  The compile commands in JSON format spit
+	//  *                                  out by CMake.
+	//  */
+	// Session(Clara::DiagnosticConsumer& consumer, const std::string& filename, const std::string& compileCommandsJson);
 
 
 	/**
@@ -126,9 +126,15 @@ public:
 
 private:
 
-	void setupBasicLangOptions(const SessionOptions& options);
-	void tryLoadCompilationDatabase(const SessionOptions& options);
-	clang::CompilerInvocation* makeInvocation(const SessionOptions& options) const;
+	friend class CancellableSyntaxOnlyAction;
+
+	void loadFromOptions();
+	clang::CompilerInvocation* makeInvocation() const;
+	void report(const char* message);
+	void dump();
+	void codeCompletePrepare(const char* unsavedBuffer, int row, int column);
+
+	SessionOptions mOptions;
 
 	std::string mFilename;
 

@@ -61,6 +61,7 @@ BOOST_PYTHON_MODULE(Clara)
 {
 	using namespace boost::python;
 	using namespace Clara;
+	using self_ns::str;
 
 	// PyEval_InitThreads();
 
@@ -83,15 +84,16 @@ BOOST_PYTHON_MODULE(Clara)
 		.def_readwrite("codeCompleteIncludeCodePatterns",  &SessionOptions::codeCompleteIncludeCodePatterns)
 		.def_readwrite("codeCompleteIncludeGlobals",       &SessionOptions::codeCompleteIncludeGlobals)
 		.def_readwrite("codeCompleteIncludeBriefComments", &SessionOptions::codeCompleteIncludeBriefComments)
+		.def(str(self))
 	;
 
-	class_<Session, boost::noncopyable>("Session", init<DiagnosticConsumer&, const std::string&>())
+	class_<Session, boost::noncopyable>("Session", init<const SessionOptions&>())
 
-		// Constructors
-		.def(init<DiagnosticConsumer&, const std::string&, const std::string&>())
-		.def(init<const std::string&>())
-		.def(init<const std::string&, const std::string&>())
-		.def(init<const SessionOptions&>())
+		// // Constructors
+		// .def(init<DiagnosticConsumer&, const std::string&, const std::string&>())
+		// .def(init<const std::string&>())
+		// .def(init<const std::string&, const std::string&>())
+		// .def()
 
 		.def_readwrite("reporter",    &Session::reporter)
 		.def("codeComplete",          &Session::codeComplete)

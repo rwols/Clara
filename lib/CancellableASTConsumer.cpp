@@ -24,15 +24,15 @@ CancellableASTConsumer::~CancellableASTConsumer() noexcept
 
 bool CancellableASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef declGroup)
 {
-	std::lock_guard<std::mutex> lock(mCreator.mCancelMutex);
+	// std::lock_guard<std::mutex> lock(mCreator.mCancelMutex);
 	// std::unique_lock<std::mutex> lock(mCreator.mCancelMutex);
-	if (mCreator.mPleaseCancel)
-	{
-		// lock.unlock();
-		throw CancelException();
-	}
+	// if (mCreator.mPleaseCancel)
+	// {
+	// 	// lock.unlock();
+	// 	throw CancelException();
+	// }
 	// lock.unlock();
-	return ASTConsumer::HandleTopLevelDecl(declGroup);
+	return !mCreator.mPleaseCancel && ASTConsumer::HandleTopLevelDecl(declGroup);
 }
 
 } // namespace Clara

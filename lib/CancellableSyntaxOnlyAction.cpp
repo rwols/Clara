@@ -15,8 +15,7 @@ std::unique_ptr<clang::ASTConsumer> CancellableSyntaxOnlyAction::CreateASTConsum
 	clang::CompilerInstance &instance, 
 	llvm::StringRef inFile)
 {
-	PythonGILEnsurer lock;
-	if (mOwner.reporter != boost::python::object()) mOwner.reporter("Creating new ASTConsumer");
+	mOwner.report("Creating new ASTConsumer.");
 	return std::make_unique<CancellableASTConsumer>(*this);
 }
 

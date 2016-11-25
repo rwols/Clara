@@ -59,6 +59,7 @@ int main()
 	std::cout << asdf.getName() << '\n';
 	MyClass qwert("hello, world");
 	std::cout << qwert.getName() << '\n';
+
   	return 0;    
 }
  

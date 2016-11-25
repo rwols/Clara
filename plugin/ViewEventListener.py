@@ -33,7 +33,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		self.noCompletionsFound = False
 		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
-		options.diagnosticPrinter = self.diagnosticPrinter
+		# options.diagnosticPrinter = self.diagnosticPrinter
 		options.logCallback = claraPrint
 		options.codeCompleteCallback = self._completionCallback
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -90,40 +90,40 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		point = locations[0]
 		if self.session is None or len(locations) > 1: return None
 		elif not self.view.match_selector(point, 'source.c++'): return None
-		else:
-			row, col = self.view.rowcol(point)
-			unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
-			row += 1 # clang rows are 1-based, sublime rows are 0-based
-			col += 1 # clang columns are 1-based, sublime columns are 0-based
-			completions = self.session.codeComplete(unsavedBuffer, row, col)
-			return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# elif self.noCompletionsFound:
-		# 	self.newCompletions = None
-		# 	self.noCompletionsFound = False
-		# 	return None
-		# elif self.point + len(prefix) == point and self.newCompletions is not None:
-		# 	claraPrint('delivering NEW completions')
-		# 	completions = self.newCompletions
-		# 	self.newCompletions = None
-		# 	self.noCompletionsFound = False
-		# 	return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# elif self.point + len(prefix) == point or self.point == point:
-		# 	if self.newCompletions is not None:
-		# 		self.noCompletionsFound = False
-		# 		completions = self.newCompletions
-		# 		self.newCompletions = None
-		# 		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 		# else:
-		# 	self.noCompletionsFound = False
-		# 	self.point = point
 		# 	row, col = self.view.rowcol(point)
 		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
 		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
 		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
-		# 	claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
-		# 	self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
-		# 	self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
-		# 	return None
+		# 	completions = self.session.codeComplete(unsavedBuffer, row, col)
+		# 	return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		elif self.noCompletionsFound:
+			self.newCompletions = None
+			self.noCompletionsFound = False
+			return None
+		elif self.point + len(prefix) == point and self.newCompletions is not None:
+			claraPrint('delivering NEW completions')
+			completions = self.newCompletions
+			self.newCompletions = None
+			self.noCompletionsFound = False
+			return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		elif self.point + len(prefix) == point or self.point == point:
+			if self.newCompletions is not None:
+				self.noCompletionsFound = False
+				completions = self.newCompletions
+				self.newCompletions = None
+				return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		else:
+			self.noCompletionsFound = False
+			self.point = point
+			row, col = self.view.rowcol(point)
+			unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
+			row += 1 # clang rows are 1-based, sublime rows are 0-based
+			col += 1 # clang columns are 1-based, sublime columns are 0-based
+			claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
+			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
+			self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
+			return None
 
 	# def on_modified_async(self):
 		# sublime.set_timeout(self._runCompilation, 3000)

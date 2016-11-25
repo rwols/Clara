@@ -37,18 +37,32 @@ public:
 	}
 };
 
-const char* standardIncludes[] =
-{
-	"/usr/include/c++/5.4.0",
-	"/usr/include/x86_64-linux-gnu/c++/5.4.0",
-	"/usr/include/c++/5.4.0/backward",
-	"/usr/local/include",
-	"/usr/local/lib/clang/4.0.0/include",
-	"/usr/include/x86_64-linux-gnu",
-	"/usr/include"
-};
+// const char* standardIncludes[] =
+// {
+// 	"/usr/include/c++/5.4.0",
+// 	"/usr/include/x86_64-linux-gnu/c++/5.4.0",
+// 	"/usr/include/c++/5.4.0/backward",
+// 	"/usr/local/include",
+// 	"/usr/local/lib/clang/4.0.0/include",
+// 	"/usr/include/x86_64-linux-gnu",
+// 	"/usr/include"
+// };
 
-clang::CompilerInvocation* Session::makeInvocation(const SessionOptions& options) const
+Session::Session(const SessionOptions& options)
+: reporter(options.logCallback)
+, mOptions(options)
+, mFilename(options.filename)
+, mAction(*this)
+{
+	using namespace boost;
+	using namespace clang;
+	using namespace clang::tooling;
+	mInstance.createDiagnostics();
+	CodeCompleteOptions codeCompleteOptions;
+	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
+}
+
+clang::CompilerInvocation* Session::makeInvocation() const
 {
 	using namespace clang;
 	auto invocation = new CompilerInvocation();
@@ -58,7 +72,14 @@ clang::CompilerInvocation* Session::makeInvocation(const SessionOptions& options
 		IK_CXX, 
 		llvm::Triple(invocation->TargetOpts->Triple), 
 		invocation->getPreprocessorOpts(), 
-		options.languageStandard);
+		mOptions.languageStandard);
+
+	auto& frontendOpts = invocation->getFrontendOpts();
+	frontendOpts.Inputs.emplace_back
+	(
+		mFilename,
+		FrontendOptions::getInputKindForExtension(mFilename)
+	);
 
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
 
@@ -71,9 +92,9 @@ clang::CompilerInvocation* Session::makeInvocation(const SessionOptions& options
 	headerSearchOpts.UseBuiltinIncludes = true;
 	headerSearchOpts.UseStandardSystemIncludes = true;
 	headerSearchOpts.UseStandardCXXIncludes = true;
-	headerSearchOpts.ResourceDir = options.builtinHeaders;
+	headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
 
-	for (const auto& systemHeader : options.systemHeaders)
+	for (const auto& systemHeader : mOptions.systemHeaders)
 	{
 		headerSearchOpts.AddPath(systemHeader, frontend::System, false, false);
 	}
@@ -81,17 +102,7 @@ clang::CompilerInvocation* Session::makeInvocation(const SessionOptions& options
 	return invocation;
 }
 
-void Session::setupBasicLangOptions(const SessionOptions& options)
-{
-	// Setup language options
-	auto &langOptions = mInstance.getLangOpts();
-	langOptions.CPlusPlus = true;
-	langOptions.CPlusPlus11 = options.cxx11;
-	langOptions.CPlusPlus14 = options.cxx14;
-	langOptions.CPlusPlus1z = options.cxx14;
-}
-
-void Session::tryLoadCompilationDatabase(const SessionOptions& options)
+void Session::loadFromOptions()
 {
 	using namespace boost;
 	using namespace clang;
@@ -99,14 +110,11 @@ void Session::tryLoadCompilationDatabase(const SessionOptions& options)
 
 	CompilerInvocation* invocation;
 
-	if (!options.jsonCompileCommands.empty())
+	if (!mOptions.jsonCompileCommands.empty())
 	{
-		{
-			PythonGILEnsurer lock;
-			if (reporter != python::object()) reporter("Attemping to load JSON compilation database.");
-		}
+		report("Attemping to load JSON compilation database.");
 		std::string errorMsg;
-		auto compdb = CompilationDatabase::autoDetectFromDirectory(options.jsonCompileCommands, errorMsg);
+		auto compdb = CompilationDatabase::autoDetectFromDirectory(mOptions.jsonCompileCommands, errorMsg);
 		if (compdb)
 		{
 			auto compileCommands = compdb->getCompileCommands(mFilename);
@@ -121,333 +129,69 @@ void Session::tryLoadCompilationDatabase(const SessionOptions& options)
 				invocation = createInvocationFromCommandLine(cstrings, &diagnostics);
 				if (invocation)
 				{
-					PythonGILEnsurer lock;
-					if (reporter != python::object()) reporter("Succesfully loaded compile commands.");
+					report("Succesfully loaded compile commands.");
 				}
 				else
 				{
-					PythonGILEnsurer lock;
-					if (reporter != python::object()) reporter("Compiler invocation failed.");
-					invocation = makeInvocation(options);
+					report("Compiler invocation failed.");
+					invocation = makeInvocation();
 				}
 			}
 			else
 			{
-				PythonGILEnsurer lock;
-				if (reporter != python::object()) reporter("Could not find compile commands.");
-				invocation = makeInvocation(options);
+				report("Could not find compile commands.");
+				invocation = makeInvocation();
 			}
 		}
 		else
 		{
 			PythonGILEnsurer lock;
 			if (reporter != python::object()) reporter(errorMsg);
-			invocation = makeInvocation(options);
+			invocation = makeInvocation();
 		}
 	}
 	else
 	{
-		PythonGILEnsurer lock;
-		if (reporter != python::object()) reporter("No JSON compilation database specified.");
-		invocation = makeInvocation(options);
+		report("No JSON compilation database specified.");
+		invocation = makeInvocation();
 	}
 
 	mInstance.setInvocation(invocation);
 }
 
-Session::Session(const SessionOptions& options)
-: reporter(options.logCallback)
-, mFilename(options.filename)
-, mAction(*this)
+void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
-	using namespace clang::tooling;
 	using namespace boost;
-
-	// Setup diagnostics engine
-	// mInstance.createDiagnostics();
-	// auto& diagnostics = mInstance.getDiagnostics();
-	// if (options.diagnosticConsumer != nullptr)
-	// {
-	// 	diagnostics.setClient(const_cast<Clara::DiagnosticConsumer*>(options.diagnosticConsumer), false);
-	// }
-
-	tryLoadCompilationDatabase(options);
-
-	// Setup target, filemanager and sourcemanager
-	// auto targetOptions = std::make_shared<TargetOptions>();
-	// targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
-	// mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
-	// mInstance.createFileManager();
-	// mInstance.createSourceManager(mInstance.getFileManager());
-
-	// Create code completion consumer
-	CodeCompleteOptions codeCompleteOptions;
-	codeCompleteOptions.IncludeMacros = options.codeCompleteIncludeMacros;
-	codeCompleteOptions.IncludeCodePatterns = options.codeCompleteIncludeCodePatterns;
-	codeCompleteOptions.IncludeGlobals = options.codeCompleteIncludeGlobals;
-	codeCompleteOptions.IncludeBriefComments = options.codeCompleteIncludeBriefComments;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
-
-	// Setup header search paths
-	// mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
-	// auto& preprocessor = mInstance.getPreprocessor();
-	// CompilerInvocation::setLangDefaults(mInstance.getLangOpts(), IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
-	// auto& headerSearch = preprocessor.getHeaderSearchInfo();
-	// auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
-	// headerSearchOpts.ResourceDir = options.builtinHeaders;
-	// std::vector<clang::DirectoryLookup> lookups;
-	// auto& fileManager = mInstance.getFileManager();
-	// for (const auto standardInclude : options.systemHeaders)
-	// {
-	// 	headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
-	// 	lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
-	// }
-	// headerSearch.SetSearchPaths(lookups, 0, 0, true);
-
-	// Create frontend options
-	auto& frontendOptions = mInstance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.FileName = mFilename;
-	if (frontendOptions.Inputs.empty())
-	{
-		FrontendInputFile input(mFilename, InputKind::IK_CXX);
-		frontendOptions.Inputs.push_back(input);
-	}
-}
-
-Session::Session(const std::string& filename)
-: mFilename(filename)
-, mAction(*this)
-{
-	PythonGILReleaser releaser;
-
-	using namespace clang;
-	using namespace boost;
-
-	// Setup language options
-	auto &langOptions = mInstance.getLangOpts();
-	langOptions.CPlusPlus = true;
-	langOptions.CPlusPlus11 = true;
-
-	// Setup diagnostics engine
+	report("Preparing completion run.");
+	// PythonGILReleaser guard;
+	mAction.cancel(); // Blocks until a concurrently running action has stopped.
+	loadFromOptions();
+	mInstance.setSourceManager(nullptr);
 	mInstance.createDiagnostics();
-
-	// Setup target, filemanager and sourcemanager
-	auto targetOptions = std::make_shared<TargetOptions>();
-	targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
-	mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
-	mInstance.createFileManager();
-	mInstance.createSourceManager(mInstance.getFileManager());
-
-	// Create code completion consumer
-	CodeCompleteOptions codeCompleteOptions;
-	codeCompleteOptions.IncludeMacros = true;
-	codeCompleteOptions.IncludeCodePatterns = true;
-	codeCompleteOptions.IncludeGlobals = true;
-	codeCompleteOptions.IncludeBriefComments = true;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
-
-	// Setup header search paths
-	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
-	auto& preprocessor = mInstance.getPreprocessor();
-	auto& headerSearch = preprocessor.getHeaderSearchInfo();
-	auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
-	headerSearchOpts.ResourceDir = "/usr/local/lib/clang/4.0.0/include/";
-	std::vector<clang::DirectoryLookup> lookups;
-	auto& fileManager = mInstance.getFileManager();
-	for (const auto standardInclude : standardIncludes)
-	{
-		headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
-		lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
-	}
-	headerSearch.SetSearchPaths(lookups, 0, 0, true);
-
-	// Create frontend options
 	auto& frontendOptions = mInstance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.FileName = mFilename;
-	FrontendInputFile input(mFilename, InputKind::IK_CXX);
-	frontendOptions.Inputs.push_back(input);
-
-	CompilerInvocation::setLangDefaults(langOptions, IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
-}
-
-Session::Session(const std::string& filename, const std::string& compileCommandsJson)
-: mFilename(filename)
-, mAction(*this)
-{
-	PythonGILReleaser releaser;
-
-	// DEBUG_PRINT;
-	using namespace clang;
-	using namespace clang::tooling;
-	using namespace boost;
-
-	// Setup diagnostics engine
-	mInstance.createDiagnostics();
-
-	std::string errorMsg;
-	auto compdb = CompilationDatabase::autoDetectFromDirectory(compileCommandsJson, errorMsg);
-	if (!compdb) throw StringException(std::move(errorMsg));
-	
-	auto compileCommands = compdb->getCompileCommands(mFilename);
-	if (compileCommands.empty())
-	{
-		throw StringException("Could not find compile commands for " + mFilename);
-	}
-	std::vector<const char*> cstrings;
-	for (const auto& compileCommand : compileCommands)
-	{
-		for (const auto& str : compileCommand.CommandLine)
-		{
-			cstrings.push_back(str.c_str());
-		}
-	}
-
-	auto& diagnostics = mInstance.getDiagnostics();
-
-	auto invocation = std::unique_ptr<CompilerInvocation>(createInvocationFromCommandLine(cstrings, &diagnostics));
-	if (!invocation)
-	{
-		errorMsg = "Failed to create a valid compiler instance from the given command line arguments for ";
-		errorMsg += mFilename;
-		errorMsg += ". They were: ";
-		for (std::size_t i = 0; i < cstrings.size(); ++i)
-		{
-			errorMsg += cstrings[i];
-			if (i != cstrings.size() - 1)
-			{
-				errorMsg += " ";
-			}
-		}
-		throw StringException(std::move(errorMsg));
-	}
-
-	mInstance.setInvocation(invocation.release());
-
-	// DEBUG_PRINT;
-	using namespace clang;
-	using namespace boost;
-
-	// Setup language options
-	auto &langOptions = mInstance.getLangOpts();
-	langOptions.CPlusPlus = true;
-	langOptions.CPlusPlus11 = true;
-
-	// Setup target, filemanager and sourcemanager
-	auto targetOptions = std::make_shared<TargetOptions>();
-	targetOptions->Triple = llvm::sys::getDefaultTargetTriple();
-	mInstance.setTarget(TargetInfo::CreateTargetInfo(mInstance.getDiagnostics(), targetOptions));
-	mInstance.createFileManager();
-	mInstance.createSourceManager(mInstance.getFileManager());
-
-	// Create code completion consumer
-	CodeCompleteOptions codeCompleteOptions;
-	codeCompleteOptions.IncludeMacros = false;
-	codeCompleteOptions.IncludeCodePatterns = true;
-	codeCompleteOptions.IncludeGlobals = false;
-	codeCompleteOptions.IncludeBriefComments = false;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
-
-	// Setup header search paths
-	CompilerInvocation::setLangDefaults(langOptions, IK_CXX, llvm::Triple(targetOptions->Triple), mInstance.getPreprocessorOpts());
-	mInstance.createPreprocessor(TranslationUnitKind::TU_Complete);
-	auto& preprocessor = mInstance.getPreprocessor();
-	auto& headerSearch = preprocessor.getHeaderSearchInfo();
-	auto& headerSearchOpts = mInstance.getHeaderSearchOpts();
-	headerSearchOpts.ResourceDir = "/usr/local/lib/clang/4.0.0/include/";
-	std::vector<clang::DirectoryLookup> lookups;
-	auto& fileManager = mInstance.getFileManager();
-	for (const auto standardInclude : standardIncludes)
-	{
-		headerSearchOpts.UserEntries.emplace_back(standardInclude, frontend::IncludeDirGroup::System, false, false);
-		lookups.emplace_back(fileManager.getDirectory(standardInclude), SrcMgr::CharacteristicKind::C_System, false);
-	}
-	headerSearch.SetSearchPaths(lookups, 0, 0, true);
-
-	// Create frontend options
-	auto& frontendOptions = mInstance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.FileName = mFilename;
-	if (frontendOptions.Inputs.empty())
-	{
-		FrontendInputFile input(mFilename, InputKind::IK_CXX);
-		frontendOptions.Inputs.push_back(input);
-	}
-}
-
-Session::Session(clang::DiagnosticConsumer& diagConsumer, const std::string& filename)
-: Session(filename)
-{
-	// DEBUG_PRINT;
-	mInstance.getDiagnostics().setClient(&diagConsumer, false);
-}
-
-Session::Session(clang::DiagnosticConsumer& diagConsumer, const std::string& filename, const std::string& compileCommandsJson)
-: Session(filename, compileCommandsJson)
-{
-	// DEBUG_PRINT;
-	mInstance.getDiagnostics().setClient(&diagConsumer, false);
-}
-
-Session::Session(Clara::DiagnosticConsumer& diagConsumer, const std::string& filename)
-: Session(static_cast<clang::DiagnosticConsumer&>(diagConsumer), filename)
-{
-	// DEBUG_PRINT;
-	/* Empty on purpose. */
-}
-
-Session::Session(Clara::DiagnosticConsumer& diagConsumer, const std::string& filename, const std::string& compileCommandsJson)
-: Session(static_cast<clang::DiagnosticConsumer&>(diagConsumer), filename, compileCommandsJson) // Delegating constructor, does all the things above here.
-{
-	// DEBUG_PRINT;
-	/* Empty on purpose. */
+	frontendOptions.CodeCompletionAt.Line = row;
+	frontendOptions.CodeCompletionAt.Column = column;
+	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
+	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
+	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
+	preprocessorOptions.RemappedFileBuffers.clear();
+	preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
 }
 
 std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
 	using namespace boost;
-
-	auto& frontendOptions = mInstance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.Line = row;
-	frontendOptions.CodeCompletionAt.Column = column;
-
-	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
-	preprocessorOptions.RemappedFileBuffers.clear();
-	if (unsavedBuffer != nullptr)
-	{
-		llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
-		auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
-		preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
-	}
+	codeCompletePrepare(unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
+	if (mInstance.ExecuteAction(mAction))
 	{
-		PythonGILEnsurer lock;
-		if (reporter != python::object()) reporter("Preparing completion run");
-	}
-	CancellableSyntaxOnlyAction action(*this);
-	if (action.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
-	{
-		{
-			PythonGILEnsurer lock;
-			if (reporter != python::object()) reporter("Executing syntax only action");
-		}
-		action.Execute();
-		{
-			PythonGILEnsurer lock;
-			if (reporter != python::object()) reporter("Finishing syntax only action");
-		}
-		action.EndSourceFile();
-		{
-			PythonGILEnsurer lock;
-			if (reporter != python::object()) reporter("Moving results");
-		}
 		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
 		consumer->moveResult(result);
 	}
-	{
-		PythonGILEnsurer lock;
-		if (reporter != python::object()) reporter("Finished completion run");
-	}
+	report("Finished completion run");
 	return result;
 }
 
@@ -455,43 +199,48 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 {
 	using namespace clang;
 	using namespace boost;
-
-	mAction.cancel();
-
-	auto& frontendOptions = mInstance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.Line = row;
-	frontendOptions.CodeCompletionAt.Column = column;
-
-	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
-	preprocessorOptions.RemappedFileBuffers.clear();
-	if (unsavedBuffer != nullptr)
+	codeCompletePrepare(unsavedBuffer, row, column);
+	std::thread task( [=] () -> void
 	{
-		llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
-		auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
-		preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
-	}
-	
-	if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
-	{
-		std::thread task( [=] () -> void
+		std::vector<std::pair<std::string, std::string>> result;
+		try
 		{
-			try
+			if (mInstance.ExecuteAction(mAction))
 			{
-				std::vector<std::pair<std::string, std::string>> result;
-				mAction.Execute();
-				mAction.EndSourceFile();
 				auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
 				consumer->moveResult(result);
 				PythonGILEnsurer pythonLock;
 				callback(result);
 			}
-			catch (const CancelException& e)
-			{
-				mAction.EndSourceFile();
-			}
-		});
-		task.detach();
-	}
+		}
+		catch (const CancelException& /*exception*/)
+		{
+			// do nothing
+		}
+
+	});
+	task.detach();
+	// if (mAction.BeginSourceFile(mInstance, frontendOptions.Inputs[0]))
+	// {
+	// 	std::thread task( [=] () -> void
+	// 	{
+	// 		try
+	// 		{
+	// 			std::vector<std::pair<std::string, std::string>> result;
+	// 			mAction.Execute();
+	// 			mAction.EndSourceFile();
+	// 			auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+	// 			consumer->moveResult(result);
+	// 			PythonGILEnsurer pythonLock;
+	// 			callback(result);
+	// 		}
+	// 		catch (const CancelException& e)
+	// 		{
+	// 			mAction.EndSourceFile();
+	// 		}
+	// 	});
+	// 	task.detach();
+	// }
 }
 
 const std::string& Session::getFilename() const noexcept
@@ -504,59 +253,12 @@ void Session::cancelAsyncCompletion()
 	mAction.cancel();
 }
 
-// bool gPleaseCancel(false);
-// bool gIsRunning(false);
-// std::mutex gCancelMutex;
-// std::condition_variable gVar;
-
-// void Session::testAsync(boost::python::object callback)
-// {
-//  std::unique_lock<std::mutex> cancelLock(gCancelMutex);
-//  if (gIsRunning)
-//  {
-//      callback("Task is already running. Waiting...");
-//      gPleaseCancel = true;
-//      gVar.wait(cancelLock, []{ return !gIsRunning; });
-//      callback("Done!");
-//  }
-//  else
-//  {
-//      callback("Nothing is running.");
-//  }
-//  cancelLock.unlock();
-//  std::thread task([=] () -> void
-//  {
-//      std::unique_lock<std::mutex> cancelLock(gCancelMutex);
-//      gIsRunning = true;
-//      cancelLock.unlock();
-//      try
-//      {
-//          for (int i = 0; i < 30; ++i)
-//          {
-//              std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//              cancelLock.lock();
-//              if (gPleaseCancel)
-//              {
-//                  cancelLock.unlock();
-//                  throw std::exception();
-//              }
-//              cancelLock.unlock();
-//          }
-//          PythonGILEnsurer pythonLock;
-//          callback("Finished with long task.");
-//      }
-//      catch (const std::exception& e)
-//      {
-
-//      }
-//      cancelLock.lock();
-//      gPleaseCancel = false;
-//      gIsRunning = false;
-//      cancelLock.unlock();
-//      gVar.notify_all();
-//  });
-//  task.detach(); // bye bye!
-// }
+void Session::report(const char* message)
+{
+	PythonGILEnsurer lock;
+	if (message != nullptr && reporter != boost::python::object())
+		reporter(message);
+}
 
 Session::~Session()
 {

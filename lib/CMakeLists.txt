@@ -28,7 +28,8 @@ set(source_files
 	RenameFunctionFrontendAction.cpp
 	RenameFunctionFrontendActionFactory.cpp
 	RenameFunctionVisitor.cpp
-	Session.cpp)
+	Session.cpp
+	SessionOptions.cpp)
 
 add_library(Clara SHARED ${source_files})
 
