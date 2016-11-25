@@ -4,7 +4,7 @@
 		{
 			"path": ".",
 			"folder_exclude_patterns": [".git"],
-			"file_exclude_patterns": [".gitignore"]
+			"file_exclude_patterns": [".gitignore", ".gitmodules"]
 		}
 	],
 	"settings":
