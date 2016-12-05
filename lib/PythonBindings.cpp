@@ -38,10 +38,10 @@ PYBIND11_PLUGIN(Clara)
 
 	class_<Session>(m, "Session")
 		.def(init<const SessionOptions&>())
-		.def_readwrite("reporter",    &Session::reporter)
+		// .def_readwrite("reporter",    &Session::reporter)
 		.def("codeComplete",          &Session::codeComplete)
 		.def("codeCompleteAsync",     &Session::codeCompleteAsync)
-		.def("cancelAsyncCompletion", &Session::cancelAsyncCompletion)
+		// .def("cancelAsyncCompletion", &Session::cancelAsyncCompletion)
 		.def("filename",              &Session::getFilename/*, return_value_policy<copy_const_reference>()*/)
 	;
 

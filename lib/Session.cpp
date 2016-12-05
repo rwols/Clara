@@ -47,16 +47,11 @@ public:
 // };
 
 Session::Session(const SessionOptions& options)
-: reporter(options.logCallback)
-, mOptions(options)
-, mFilename(options.filename)
-, mAction(*this)
+// : reporter(options.logCallback)
+: mOptions(options)
+// , mFilename(options.filename)
+// , mAction(*this)
 {
-	using namespace clang;
-	using namespace clang::tooling;
-	mInstance.createDiagnostics();
-	CodeCompleteOptions codeCompleteOptions;
-	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 }
 
 clang::CompilerInvocation* Session::makeInvocation() const
@@ -74,8 +69,8 @@ clang::CompilerInvocation* Session::makeInvocation() const
 	auto& frontendOpts = invocation->getFrontendOpts();
 	frontendOpts.Inputs.emplace_back
 	(
-		mFilename,
-		FrontendOptions::getInputKindForExtension(mFilename)
+		getFilename(),
+		FrontendOptions::getInputKindForExtension(getFilename())
 	);
 
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
@@ -99,7 +94,7 @@ clang::CompilerInvocation* Session::makeInvocation() const
 	return invocation;
 }
 
-void Session::loadFromOptions()
+void Session::loadFromOptions(clang::CompilerInstance& instance) const
 {
 	using namespace clang;
 	using namespace clang::tooling;
@@ -113,7 +108,7 @@ void Session::loadFromOptions()
 		auto compdb = CompilationDatabase::autoDetectFromDirectory(mOptions.jsonCompileCommands, errorMsg);
 		if (compdb)
 		{
-			auto compileCommands = compdb->getCompileCommands(mFilename);
+			auto compileCommands = compdb->getCompileCommands(getFilename());
 			if (!compileCommands.empty())
 			{
 				std::vector<const char*> cstrings;
@@ -121,7 +116,7 @@ void Session::loadFromOptions()
 				{
 					for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
 				}
-				auto& diagnostics = mInstance.getDiagnostics();
+				auto& diagnostics = instance.getDiagnostics();
 				invocation = createInvocationFromCommandLine(cstrings, &diagnostics);
 				if (invocation)
 				{
@@ -151,63 +146,69 @@ void Session::loadFromOptions()
 		invocation = makeInvocation();
 	}
 
-	mInstance.setInvocation(invocation);
+	instance.setInvocation(invocation);
 }
 
-void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column)
+void Session::codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const
 {
 	using namespace clang;
 	report("Preparing completion run.");
 	// PythonGILReleaser guard;
-	mAction.cancel(); // Blocks until a concurrently running action has stopped.
-	loadFromOptions();
-	mInstance.setSourceManager(nullptr);
-	mInstance.createDiagnostics();
-	auto& frontendOptions = mInstance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.FileName = mFilename;
+	// mAction.cancel(); // Blocks until a concurrently running action has stopped.
+	loadFromOptions(instance);
+	instance.setSourceManager(nullptr);
+	instance.createDiagnostics();
+	auto& frontendOptions = instance.getFrontendOpts();
+	frontendOptions.CodeCompletionAt.FileName = getFilename();
 	frontendOptions.CodeCompletionAt.Line = row;
 	frontendOptions.CodeCompletionAt.Column = column;
-	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
+	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, getFilename());
 	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
-	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
+	auto& preprocessorOptions = instance.getPreprocessorOpts();
 	preprocessorOptions.RemappedFileBuffers.clear();
-	preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
+	preprocessorOptions.RemappedFileBuffers.emplace_back(getFilename(), memBuffer.release());
 }
 
-std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
+std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column) const
 {
 	using namespace clang;
-	codeCompletePrepare(unsavedBuffer, row, column);
+	using namespace clang::frontend;
+	CompilerInstance instance;
+	instance.createDiagnostics();
+	CodeCompleteOptions codeCompleteOptions;
+	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
+	codeCompletePrepare(instance, unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
-	if (mInstance.ExecuteAction(mAction))
+	SyntaxOnlyAction action;
+	if (instance.ExecuteAction(action))
 	{
-		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
+		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
 		consumer->moveResult(result);
 	}
 	report("Finished completion run");
 	return result;
 }
 
-void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, pybind11::object callback)
+void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback) const
 {
 	using namespace clang;
-	codeCompletePrepare(unsavedBuffer, row, column);
-	std::thread task( [=] () -> void
+	using namespace clang::frontend;
+	
+	std::thread task( [this, row, column, callback, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
+		CompilerInstance instance;
+		instance.createDiagnostics();
+		CodeCompleteOptions codeCompleteOptions;
+		instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
+		codeCompletePrepare(instance, unsavedBuffer.c_str(), row, column);
 		std::vector<std::pair<std::string, std::string>> result;
-		try
+		SyntaxOnlyAction action;
+		if (instance.ExecuteAction(action))
 		{
-			if (mInstance.ExecuteAction(mAction))
-			{
-				auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
-				consumer->moveResult(result);
-				PythonGILEnsurer pythonLock;
-				callback(result);
-			}
-		}
-		catch (const CancelException& /*exception*/)
-		{
-			// do nothing
+			auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
+			consumer->moveResult(result);
+			PythonGILEnsurer pythonLock;
+			callback(row, column, result);
 		}
 
 	});
@@ -216,24 +217,27 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 
 const std::string& Session::getFilename() const noexcept
 {
-	return mFilename;
+	return mOptions.filename;
 }
 
-void Session::cancelAsyncCompletion()
-{
-	mAction.cancel();
-}
+// void Session::cancelAsyncCompletion()
+// {
+// 	mAction.cancel();
+// }
 
-void Session::report(const char* message)
+void Session::report(const char* message) const
 {
 	PythonGILEnsurer lock;
-	if (message != nullptr && reporter != pybind11::object())
-		reporter(message);
+	if (message != nullptr && mOptions.logCallback != pybind11::object())
+	{
+		// yeah this is horrible.
+		const_cast<Session*>(this)->mOptions.logCallback(message);
+	}
 }
 
 Session::~Session()
 {
-	mInstance.clearOutputFiles(false);
+	// mInstance.clearOutputFiles(false);
 }
 
 } // namespace Clara

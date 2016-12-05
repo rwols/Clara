@@ -7,7 +7,7 @@
 
 namespace Clara {
 
-CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, Session& owner)
+CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, const Session& owner)
 : clang::CodeCompleteConsumer(options, false)
 , mOwner(owner)
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)

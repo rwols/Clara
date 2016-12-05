@@ -15,7 +15,7 @@ public:
 
 	bool includeOptionalArguments = true;
 
-	CodeCompleteConsumer(const clang::CodeCompleteOptions& options, Session& owner);
+	CodeCompleteConsumer(const clang::CodeCompleteOptions& options, const Session& owner);
 
 	void ProcessCodeCompleteResults(
 		clang::Sema &sema, 
@@ -39,7 +39,7 @@ public:
 
 private:
 
-	Session& mOwner;
+	const Session& mOwner;
 
 	clang::CodeCompletionTUInfo mCCTUInfo;
 
