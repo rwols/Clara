@@ -9,6 +9,11 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 		super(ClaraInsertDiagnosisCommand, self).__init__(view)
 		self.errorCount = 0
 
+	def run(self, edit):
+		self._diagnose(edit)
+		if self.errorCount == 0:
+			self._printLine(edit, '\nEverything seems to be OK!')
+
 	def _diagnose(self, edit):
 
 		CLANG = "clang++"
@@ -62,29 +67,23 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 			self._ERR(edit, 'Could not open file ' + projectFilename)
 			return
 
-		claraSettings = project['clara']
+		cmakeSettings = project['cmake']
 
-		if claraSettings:
-			claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
-			cmakeFile = claraSettings['cmake_file']
-			buildFolder = claraSettings['build_folder']
-			if cmakeFile:
-				self._OK(edit, 'Found CMake file: ' + cmakeFile)
-			else:
-				self._ERR(edit, 'No cmake_file present in clara settings of ' + projectFilename)
+		if cmakeSettings:
+			cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
+			# cmakeFile = cmakeSettings['cmake_file']
+			buildFolder = cmakeSettings['build_folder']
+			# if cmakeFile:
+			# 	self._OK(edit, 'Found CMake file: ' + cmakeFile)
+			# else:
+			# 	self._ERR(edit, 'No cmake_file present in clara settings of ' + projectFilename)
 			if buildFolder:
 				self._OK(edit, 'Found CMake build folder: ' + buildFolder)
 			else:
 				self._ERR(edit, 'No build_folder present in clara settings of ' + projectFilename)
 		else:
-			self._ERR(edit, 'No clara settings found in ' + projectFilename)
+			self._ERR(edit, 'No cmake settings found in ' + projectFilename)
 			return
-
-	def run(self, edit):
-		self._diagnose(edit)
-		if self.errorCount == 0:
-			self._printLine(edit, '\nEverything seems to be OK!')
-
 
 	def _printLine(self, edit, str):
 		self.view.insert(edit, self.view.size(), str + '\n')

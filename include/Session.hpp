@@ -123,6 +123,8 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
+	void report(const char* message);
+
 private:
 
 	friend class CancellableSyntaxOnlyAction;
@@ -130,9 +132,11 @@ private:
 
 	void loadFromOptions();
 	clang::CompilerInvocation* makeInvocation() const;
-	void report(const char* message);
+	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
+	
 	void dump();
 	void codeCompletePrepare(const char* unsavedBuffer, int row, int column);
+	void resetDiagnosticsAndSourceManager();
 
 	SessionOptions mOptions;
 

@@ -2,8 +2,8 @@
 #include "DiagnosticConsumer.hpp"
 #include "Configuration.hpp"
 #include "SessionOptions.hpp"
-#include <clang/Tooling/CompilationDatabase.h>
-#include <pybind11/pybind11.h>
+
+// #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 PYBIND11_PLUGIN(Clara)
@@ -13,16 +13,18 @@ PYBIND11_PLUGIN(Clara)
 
 	module m("Clara", "Clara plugin");
 
-	class_<DiagnosticConsumer>(m, "DiagnosticConsumer")
+	class_<DiagnosticConsumer, PyDiagnosticConsumer, std::shared_ptr<DiagnosticConsumer>>(m, "DiagnosticConsumer")
 		.def(init<>())
-		.def("beginSourceFile",  &DiagnosticConsumer::beginSourceFile)
-		.def("endSourceFile",    &DiagnosticConsumer::EndSourceFile)
-		.def("finish",           &DiagnosticConsumer::finish)
-		.def("handleDiagnostic", &DiagnosticConsumer::handleDiagnostic)
+		.def("handleNote",       &DiagnosticConsumer::handleNote)
+		.def("handleRemark",     &DiagnosticConsumer::handleRemark)
+		.def("handleWarning",    &DiagnosticConsumer::handleWarning)
+		.def("handleError",      &DiagnosticConsumer::handleError)
+		.def("handleFatalError", &DiagnosticConsumer::handleFatalError)
 	;
 
 	class_<SessionOptions>(m, "SessionOptions")
 		.def(init<>())
+		.def_readwrite("diagnosticConsumer",               &SessionOptions::diagnosticConsumer, "The diagnostic consumer handling diagnostic callbacks.")
 		.def_readwrite("logCallback",                      &SessionOptions::logCallback, "A callable python object that accepts strings as single argument.")
 		.def_readwrite("codeCompleteCallback",             &SessionOptions::codeCompleteCallback, "A callable python object that accepts a list of pairs of strings.")
 		.def_readwrite("filename",                         &SessionOptions::filename, "The filename of the session.")

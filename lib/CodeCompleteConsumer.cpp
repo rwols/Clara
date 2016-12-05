@@ -1,7 +1,6 @@
-#include <pybind11/pybind11.h>
+#include "PyBind11.hpp"
 #include "CodeCompleteConsumer.hpp"
 #include "Session.hpp"
-#include "PythonGILEnsurer.hpp"
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
@@ -13,7 +12,6 @@ CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& opt
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */
-	DEBUG_PRINT;
 }
 
 void CodeCompleteConsumer::ProcessCodeCompleteResults(
@@ -56,7 +54,7 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 	std::string first, second, informative;
 	unsigned argCount = 0;
 
-	mOwner.report("Processing completion...");
+	// mOwner.report("Processing completion...");
 
 	switch (result.Kind) 
 	{
@@ -124,10 +122,10 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 
 	pair.first = std::move(first);
 	pair.second = std::move(second);
-	{
-		std::string msg = "Completion: " + pair.second;
-		mOwner.report(msg.c_str());
-	}
+	// {
+	// 	std::string msg = "Completion: " + pair.second;
+	// 	mOwner.report(msg.c_str());
+	// }
 	return pair;
 }
 

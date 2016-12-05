@@ -24,13 +24,9 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def __init__(self, view):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
-		self.diagnosticPrinter = DiagnosticPrinter(claraPrint)
 		self.phantoms = sublime.PhantomSet(self.view, 'Clara')
 		self.session = None
-		self.newCompletions = None
-		self.oldCompletions = None
-		self.point = -1
-		self.noCompletionsFound = False
+		self.point2completions = {}
 		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
 		# options.diagnosticPrinter = self.diagnosticPrinter
@@ -48,11 +44,11 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			try:
 				project = self.view.window().project_data()
 				if project is None: raise Exception('No sublime-project found.')
-				claraSettings = project.get('clara')
-				if claraSettings is None: raise Exception('No settings found in sublime-project file.')
-				claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
-				cmakeFile = claraSettings.get('cmake_file')
-				buildFolder = claraSettings.get('build_folder')
+				cmakeSettings = project.get('cmake')
+				if cmakeSettings is None: raise Exception('No cmake settings found in sublime-project file.')
+				cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
+				rootFolder = cmakeSettings.get('root_folder')
+				buildFolder = cmakeSettings.get('build_folder')
 				options.jsonCompileCommands = "" if buildFolder is None else buildFolder
 			except Exception as e:
 				claraPrint(str(e))
@@ -61,7 +57,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
-
+		options.diagnosticConsumer = DiagnosticPrinter(claraPrint)
 		self.session = Session(options)
 
 	def _loadHeaders(self, key):
@@ -76,28 +72,55 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			sublime.error_message('Clara will not work without setting up headers!')
 			return None
 
-	# def on_activated_async(self):
-	# 	"""Checks wether we already have an active session object.
-	# 	If not, construct one."""
-	# 	if self.session is not None: return
-
-	def _tempCompletionMessage(self):
-		completions = [['\tPlease wait...', ' ']];
-		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-
 	def on_query_completions(self, prefix, locations):
 		"""Find all possible completions."""
 		point = locations[0]
-		if self.session is None or len(locations) > 1: return None
-		elif not self.view.match_selector(point, 'source.c++'): return None
+		if (self.session is None or 
+			len(locations) > 1 or 
+			not self.view.match_selector(point, 'source.c++')):
+			return None
+		completions = self.point2completions.pop(point - len(prefix), None)
+		if completions:
+			return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 		else:
 			row, col = self.view.rowcol(point)
 			unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
 			row += 1 # clang rows are 1-based, sublime rows are 0-based
 			col += 1 # clang columns are 1-based, sublime columns are 0-based
-			completions = self.session.codeComplete(unsavedBuffer, row, col)
-			print(completions)
-			return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+			claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
+			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completeCallback)
+
+		# if self.point + len(prefix) == point:
+		# 	if self.newCompletions:
+		# 		claraPrint('delivering new completions')
+		# 		completions = self.newCompletions
+		# 		self.newCompletions = None
+		# 		self.point = -1
+		# 		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+		# 	else:
+		# 		self.view.hide_popup()
+		# 		self.view.show_popup('Still thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
+		# 		return None
+		# else:
+		# 	self.point = point
+		# 	row, col = self.view.rowcol(point)
+		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
+		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
+		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
+		# 	claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
+		# 	self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
+		# 	self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
+		# 	return None
+			
+
+		# else:
+		# 	row, col = self.view.rowcol(point)
+		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
+		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
+		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
+		# 	completions = self.session.codeComplete(unsavedBuffer, row, col)
+		# 	# print(completions)
+		# 	return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 		# elif self.noCompletionsFound:
 		# 	self.newCompletions = None
 		# 	self.noCompletionsFound = False
@@ -140,22 +163,25 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def _errorCallback(self, message):
 		claraPrint(message)
 
-	def _completionCallback(self, completions):
-		claraPrint('completions are ready, rerunning auto completion')
-		self.view.hide_popup()
-		# claraPrint('note: completions are {}'.format(completions))
-		if len(completions) == 0:
-			claraPrint('no completions were found!')
-			self.noCompletionsFound = True
-			self.newCompletions = None
-		else:
-			self.noCompletionsFound = False
-			self.newCompletions = completions
+	def _completeCallback(self, row, col, completions):
+		point = self.view.text_point(row - 1, col - 1)
+		self.point2completions[point] = completions
 		self.view.run_command('hide_auto_complete')
 		self.view.run_command('auto_complete', {
 			'disable_auto_insert': True,
 			'api_completions_only': True,
 			'next_competion_if_showing': False})
+
+	# def _completionCallback(self, completions):
+	# 	claraPrint('completions are ready, rerunning auto completion')
+	# 	self.view.hide_popup()
+	# 	assert self.newCompletions is None
+	# 	self.newCompletions = completions
+	# 	self.view.run_command('hide_auto_complete')
+	# 	self.view.run_command('auto_complete', {
+	# 		'disable_auto_insert': True,
+	# 		'api_completions_only': True,
+	# 		'next_competion_if_showing': False})
 			
 		
 

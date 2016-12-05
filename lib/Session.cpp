@@ -4,7 +4,6 @@
 #include "CancelException.hpp"
 #include "DiagnosticConsumer.hpp"
 #include "SessionOptions.hpp"
-#include "PythonGILEnsurer.hpp"
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -15,36 +14,55 @@
 #include <clang/Lex/Preprocessor.h>
 #include <clang/Lex/HeaderSearch.h>
 #include <clang/Frontend/FrontendActions.h>
+#include <pybind11/stl.h>
 
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
 
-class PythonGILReleaser
+class SimplePrinter : public DiagnosticConsumer
 {
-	PyThreadState* mState;
-
 public:
-
-	PythonGILReleaser() : mState(PyEval_SaveThread()) {}
-
-	~PythonGILReleaser() 
+	SimplePrinter(Session& owner) : mOwner(owner) {}
+	~SimplePrinter() override = default;
+	void handleNote(const std::string& filename, int row, int column, const std::string& message) override
 	{
-		PyEval_RestoreThread(mState);
+		reportMsg("NOTE   ", filename, row, column, message);
 	}
+	void handleRemark(const std::string& filename, int row, int column, const std::string& message) override
+	{
+		reportMsg("REMARK ", filename, row, column, message);
+	}
+	void handleWarning(const std::string& filename, int row, int column, const std::string& message) override
+	{
+		reportMsg("WARNING", filename, row, column, message);
+	}
+	void handleError(const std::string& filename, int row, int column, const std::string& message) override
+	{
+		reportMsg("ERROR  ", filename, row, column, message);
+	}
+	void handleFatalError(const std::string& filename, int row, int column, const std::string& message) override
+	{
+		reportMsg("FATAL  ", filename, row, column, message);
+	}
+private:
+	void reportMsg(const char* prefix, const std::string& filename, int row, int column, const std::string& message)
+	{
+		std::string msg(prefix);
+		msg.append(": ");
+		if (!filename.empty())
+		{
+			msg.append(filename);
+			msg.append(":").append(std::to_string(row));
+			msg.append(":").append(std::to_string(column));
+			msg.append(": ");
+		}
+		msg.append(message);
+		mOwner.report(msg.c_str());
+	}
+	Session& mOwner;
 };
-
-// const char* standardIncludes[] =
-// {
-// 	"/usr/include/c++/5.4.0",
-// 	"/usr/include/x86_64-linux-gnu/c++/5.4.0",
-// 	"/usr/include/c++/5.4.0/backward",
-// 	"/usr/local/include",
-// 	"/usr/local/lib/clang/4.0.0/include",
-// 	"/usr/include/x86_64-linux-gnu",
-// 	"/usr/include"
-// };
 
 Session::Session(const SessionOptions& options)
 : reporter(options.logCallback)
@@ -54,7 +72,7 @@ Session::Session(const SessionOptions& options)
 {
 	using namespace clang;
 	using namespace clang::tooling;
-	mInstance.createDiagnostics();
+	resetDiagnosticsAndSourceManager();
 	CodeCompleteOptions codeCompleteOptions;
 	mInstance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 }
@@ -78,6 +96,13 @@ clang::CompilerInvocation* Session::makeInvocation() const
 		FrontendOptions::getInputKindForExtension(mFilename)
 	);
 
+	fillInvocationWithStandardHeaderPaths(invocation);
+
+	return invocation;
+}
+
+void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const
+{
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
 
 	#ifdef PRINT_HEADER_SEARCH_PATHS
@@ -93,10 +118,8 @@ clang::CompilerInvocation* Session::makeInvocation() const
 
 	for (const auto& systemHeader : mOptions.systemHeaders)
 	{
-		headerSearchOpts.AddPath(systemHeader, frontend::System, false, false);
+		headerSearchOpts.AddPath(systemHeader, clang::frontend::System, false, false);
 	}
-
-	return invocation;
 }
 
 void Session::loadFromOptions()
@@ -119,12 +142,27 @@ void Session::loadFromOptions()
 				std::vector<const char*> cstrings;
 				for (const auto& compileCommand : compileCommands)
 				{
-					for (const auto& str : compileCommand.CommandLine) cstrings.push_back(str.c_str());
+					// Skip first argument, because that's the path to the compiler.
+					for (std::size_t i = 1; i < compileCommand.CommandLine.size(); ++i)
+					{
+						const auto& str = compileCommand.CommandLine[i];
+						if (str.find("-o") != std::string::npos)
+						{
+							++i;
+						}
+						else
+						{
+							cstrings.push_back(str.c_str());
+							// report(cstrings.back());
+						}
+					}
 				}
 				auto& diagnostics = mInstance.getDiagnostics();
 				invocation = createInvocationFromCommandLine(cstrings, &diagnostics);
 				if (invocation)
 				{
+					invocation->getFileSystemOpts().WorkingDir = compileCommands[0].Directory;
+					fillInvocationWithStandardHeaderPaths(invocation);
 					report("Succesfully loaded compile commands.");
 				}
 				else
@@ -160,8 +198,7 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 	report("Preparing completion run.");
 	mAction.cancel(); // Blocks until a concurrently running action has stopped.
 	loadFromOptions();
-	mInstance.setSourceManager(nullptr);
-	mInstance.createDiagnostics();
+	resetDiagnosticsAndSourceManager();
 	auto& frontendOptions = mInstance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.FileName = mFilename;
 	frontendOptions.CodeCompletionAt.Line = row;
@@ -169,6 +206,10 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mFilename);
 	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
 	auto& preprocessorOptions = mInstance.getPreprocessorOpts();
+	for (auto& remappedFile : preprocessorOptions.RemappedFileBuffers)
+	{
+		delete remappedFile.second;
+	}
 	preprocessorOptions.RemappedFileBuffers.clear();
 	preprocessorOptions.RemappedFileBuffers.emplace_back(mFilename, memBuffer.release());
 }
@@ -176,7 +217,7 @@ void Session::codeCompletePrepare(const char* unsavedBuffer, int row, int column
 std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
-	PythonGILReleaser guard;
+	pybind11::gil_scoped_release release;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
 	if (mInstance.ExecuteAction(mAction))
@@ -184,14 +225,16 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
 		consumer->moveResult(result);
 	}
-	report("Finished completion run");
+	else
+	{
+		report("Completion run FAILED.");
+	}
 	return result;
 }
 
 void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
-	PythonGILReleaser guard;
 	codeCompletePrepare(unsavedBuffer, row, column);
 	std::thread task( [=] () -> void
 	{
@@ -202,8 +245,23 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 				auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&mInstance.getCodeCompletionConsumer());
 				std::vector<std::pair<std::string, std::string>> result;
 				consumer->moveResult(result);
-				PythonGILEnsurer pythonLock;
-				callback(result);
+				pybind11::gil_scoped_acquire acquire;
+				try
+				{
+					callback(row, column, result);
+				}
+				catch (const pybind11::cast_error& e)
+				{
+					reporter(e.what());
+				}
+				catch (const pybind11::error_already_set& e)
+				{
+					reporter(e.what());
+				}
+			}
+			else
+			{
+				report("Completion run FAILED.");
 			}
 		}
 		catch (const CancelException& /*exception*/)
@@ -213,6 +271,17 @@ void Session::codeCompleteAsync(const char* unsavedBuffer, int row, int column, 
 
 	});
 	task.detach();
+}
+
+void Session::resetDiagnosticsAndSourceManager()
+{
+	mInstance.setSourceManager(nullptr);
+	mInstance.createDiagnostics();
+	auto client = new SimplePrinter(*this);
+
+	// Takes ownership of the pointer so we don't have
+	// to keep it around.
+	mInstance.getDiagnostics().setClient(client);
 }
 
 const std::string& Session::getFilename() const noexcept
@@ -228,8 +297,22 @@ void Session::cancelAsyncCompletion()
 void Session::report(const char* message)
 {
 	if (message == nullptr) return;
-	PythonGILEnsurer lock;
-	if (reporter != pybind11::object()) reporter(message);
+	pybind11::gil_scoped_acquire acquire;
+	if (reporter != pybind11::object())
+	{
+		try
+		{
+			reporter(std::string(message));
+		}
+		catch (const pybind11::cast_error& e)
+		{
+			reporter(e.what());
+		}
+		catch (const pybind11::error_already_set& e)
+		{
+			reporter(e.what());
+		}
+	}
 }
 
 Session::~Session()

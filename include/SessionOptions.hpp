@@ -2,9 +2,9 @@
 
 #include <vector>
 #include <string>
-#include <pybind11/pybind11.h>
 #include <iosfwd>
 #include <clang/Frontend/LangStandard.h>
+#include "PyBind11.hpp"
 
 namespace Clara {
 
@@ -14,7 +14,7 @@ struct SessionOptions
 {
 	pybind11::object logCallback;
 	pybind11::object codeCompleteCallback;
-	Clara::DiagnosticConsumer* diagnosticConsumer = nullptr;
+	std::shared_ptr<Clara::DiagnosticConsumer> diagnosticConsumer = nullptr;
 	std::string filename;
 	std::vector<std::string> systemHeaders;
 	std::string builtinHeaders;

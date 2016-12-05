@@ -1,2 +1,2 @@
-add_clang_executable(clangapitest clangapitest.cpp)
+add_executable(clangapitest clangapitest.cpp)
 target_link_libraries(clangapitest clangFrontend)
