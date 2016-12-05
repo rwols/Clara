@@ -1,4 +1,3 @@
-#include "PythonGILEnsurer.hpp"
 #include "CancellableSyntaxOnlyAction.hpp"
 #include "CancellableASTConsumer.hpp"
 #include "Session.hpp"

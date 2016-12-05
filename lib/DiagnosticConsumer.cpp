@@ -1,64 +1,62 @@
 #include "DiagnosticConsumer.hpp"
 #include <pybind11/stl.h>
+#include <llvm/ADT/SmallString.h>
+#include <clang/Lex/Preprocessor.h>
 
 namespace Clara {
 
 void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, const clang::Preprocessor* pp)
 {
-	beginSourceFile();
-}
-
-void DiagnosticConsumer::EndSourceFile()
-{
-	// do nothing
-}
-
-void DiagnosticConsumer::finish()
-{
-
-	// do nothing
-}
-
-bool DiagnosticConsumer::IncludeInDiagnosticCounts() const
-{
-	return true;
+	clang::DiagnosticConsumer::BeginSourceFile(options, pp);
+	mSourceMgr = pp == nullptr ? nullptr : &(pp->getSourceManager());
 }
 
 void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, const clang::Diagnostic& info)
 {
-	pybind11::list result;
-	for (unsigned i = 0; i < info.getNumArgs(); ++i)
+	clang::DiagnosticConsumer::HandleDiagnostic(level, info);
+	llvm::SmallString<100> message;
+	info.FormatDiagnostic(message);
+	#ifndef NDEBUG
+	llvm::errs() << "DIAG MSG: " << message << '\n';
+	#endif // NDEBUG
+	const auto presumedLoc = makePresumedLoc(info);
+	switch (level) 
 	{
-		switch (info.getArgKind(i))
-		{
-			case clang::DiagnosticsEngine::ak_std_string:
-				result.append(pybind11::cast(info.getArgStdStr(i)));
-				break;
-			case clang::DiagnosticsEngine::ak_c_string:
-				result.append(pybind11::cast(info.getArgCStr(i)));
-				break;
-			case clang::DiagnosticsEngine::ak_sint:
-				result.append(pybind11::cast(info.getArgSInt(i)));
-				break;
-			case clang::DiagnosticsEngine::ak_uint:
-				result.append(pybind11::cast(info.getArgUInt(i)));
-				break;
-			default:
-				result.append(pybind11::cast("unkown type"));
-				break;
-		}
+		case clang::DiagnosticsEngine::Note:
+			if (presumedLoc.isValid()) handleNote(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
+			else handleNote(std::string(), -1, -1, message.c_str());
+			break;
+		case clang::DiagnosticsEngine::Warning:
+			if (presumedLoc.isValid()) handleWarning(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
+			else handleWarning(std::string(), -1, -1, message.c_str());
+			break;
+		case clang::DiagnosticsEngine::Remark:
+			if (presumedLoc.isValid()) handleRemark(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
+			else handleRemark(std::string(), -1, -1, message.c_str());
+			break;
+		case clang::DiagnosticsEngine::Error:
+			if (presumedLoc.isValid()) handleError(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
+			else handleError(std::string(), -1, -1, message.c_str());
+			break;
+		case clang::DiagnosticsEngine::Fatal:
+			if (presumedLoc.isValid()) handleFatalError(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
+			else handleFatalError(std::string(), -1, -1, message.c_str());
+			break;
+		default:
+			break;
 	}
-	handleDiagnostic(level, result);
 }
 
-void DiagnosticConsumer::beginSourceFile()
+clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& info) const
 {
-	// do nothing
-}
-
-void DiagnosticConsumer::handleDiagnostic(clang::DiagnosticsEngine::Level level, pybind11::list info)
-{
-	// do nothing
+	if (mSourceMgr)
+	{
+		return mSourceMgr->getPresumedLoc(info.getLocation());
+	}
+	else
+	{
+		return clang::PresumedLoc(nullptr, -1, -1, clang::SourceLocation());
+	}
 }
 
 } // namespace Clara

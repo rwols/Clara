@@ -1,33 +1,60 @@
 {
+	"build_systems":
+	[
+		{
+			"file_regex": "^(/.[^:]*):(\\d+):(\\d+): (?:fatal )?(?:error|warning): (.*)$",
+			"name": "Clara",
+			"shell_cmd": "cmake --build .",
+			"variants":
+			[
+				{
+					"name": "ClaraPlugin",
+					"shell_cmd": "make ClaraPlugin -j4"
+				},
+				{
+					"name": "ClaraInstall",
+					"shell_cmd": "make ClaraInstall -j4"
+				},
+				{
+					"name": "Clara",
+					"shell_cmd": "make Clara -j4"
+				}
+			],
+			"working_dir": "${project_path}/../../../../build"
+		}
+	],
+	"cmake":
+	{
+		"build_folder": "${project_path}/../../../../build",
+		"command_line_overrides":
+		{
+			"LLVM_ENABLE_EH": true,
+			"LLVM_ENABLE_RTTI": true
+		},
+		"filter_targets":
+		[
+			"Clara",
+			"ClaraInstall"
+		],
+		"root_folder": "${project_path}/../../../.."
+	},
 	"folders":
 	[
 		{
-			"path": ".",
-			"folder_exclude_patterns": [".git"],
-			"file_exclude_patterns": [".gitignore", ".gitmodules"]
+			"file_exclude_patterns":
+			[
+				".gitignore",
+				".gitmodules"
+			],
+			"folder_exclude_patterns":
+			[
+				".git"
+			],
+			"path": "."
 		}
 	],
 	"settings":
 	{
 		"tab_size": 4
-	},
-	"clara":
-	{
-		"cmake_file": "${project_path}/CMakeLists.txt",
-		"build_folder": "${project_path}/../../../../build",
-	},
-	"build_systems":
-	[
-		{
-			"name": "Clara",
-			"working_dir": "${project_path}/build",
-			"shell_cmd": "cmake --build .",
-			"file_regex": "^(/.[^:]*):(\\d+):(\\d+): error: (.*)$",
-			"selector": "source.c++",
-			"windows":
-			{
-				"file_regex": "^\\s*(.+?)\\(([0-9]+),?([0-9]+)?\\):\\s*(.*) \\["
-			}
-		}
-	]
+	}
 }

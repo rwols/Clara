@@ -2,7 +2,6 @@
 
 #include <clang/Sema/CodeCompleteConsumer.h>
 #include <clang/Sema/Overload.h>
-#include <boost/python/list.hpp>
 #include <string>
 
 namespace Clara {

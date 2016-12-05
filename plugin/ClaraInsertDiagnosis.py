@@ -9,6 +9,11 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 		super(ClaraInsertDiagnosisCommand, self).__init__(view)
 		self.errorCount = 0
 
+	def run(self, edit):
+		self._diagnose(edit)
+		if self.errorCount == 0:
+			self._printLine(edit, '\nEverything seems to be OK!')
+
 	def _diagnose(self, edit):
 
 		CLANG = "clang++"
@@ -19,7 +24,7 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 		
 		clangBinary = getFromShell('which clang++')
 		if clangBinary:
-			self._OK(edit, 'clang is located at ' + clangBinary)
+			self._OK(edit, 'found clang binary at "{}"'.format(clangBinary))
 		else:
 			self._ERR(edit, 'clang was NOT found')
 			return
@@ -53,38 +58,49 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 		projectFilename = self.view.window().project_file_name()
 
 		if projectFilename:
-			self._OK(edit, 'Found project: ' + projectFilename)
+			self._OK(edit, 'Found project "{}"'.format(projectFilename))
 		else:
 			self._ERR(edit, 'Did NOT find a sublime-project file.')
 			return
 
 		if not project:
-			self._ERR(edit, 'Could not open file ' + projectFilename)
+			self._ERR(edit, 'Could not open file "{}"'.format(projectFilename))
 			return
 
-		claraSettings = project['clara']
+		cmakeSettings = project['cmake']
 
-		if claraSettings:
-			claraSettings = sublime.expand_variables(claraSettings, self.view.window().extract_variables())
-			cmakeFile = claraSettings['cmake_file']
-			buildFolder = claraSettings['build_folder']
-			if cmakeFile:
-				self._OK(edit, 'Found CMake file: ' + cmakeFile)
-			else:
-				self._ERR(edit, 'No cmake_file present in clara settings of ' + projectFilename)
+		if cmakeSettings:
+			cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
+			# cmakeFile = cmakeSettings['cmake_file']
+			buildFolder = cmakeSettings['build_folder']
+			# if cmakeFile:
+			# 	self._OK(edit, 'Found CMake file: ' + cmakeFile)
+			# else:
+			# 	self._ERR(edit, 'No cmake_file present in clara settings of ' + projectFilename)
 			if buildFolder:
-				self._OK(edit, 'Found CMake build folder: ' + buildFolder)
+				self._OK(edit, 'Found CMake build folder "{}"'.format(buildFolder))
+
+				COMPILE_COMMANDS = 'compile_commands.json'
+				compileCommands = os.path.join(buildFolder, COMPILE_COMMANDS)
+				if os.path.isfile(compileCommands):
+					self._OK(edit, 'Found {} in {}'.format(COMPILE_COMMANDS, buildFolder))
+				else:
+					self._ERR(edit, 'Did NOT find "{}" in the build folder "{}".\n\
+Clara needs this file to know exactly which compiler arguments are passed to \
+each individual source file for correct auto-completion. \
+Make sure to have the line "set(CMAKE_COMPILE_COMMANDS ON)" in \
+your top-level CMakeLists.txt file, or pass it as a command line argument \
+to your cmake invocation. Alternatively, perhaps you still need to configure \
+your cmake project.'.format(COMPILE_COMMANDS, buildFolder))
+					return
+
+				os.path.isfile(os.path.join(buildFolder, "compile_commands.json"));
+
 			else:
 				self._ERR(edit, 'No build_folder present in clara settings of ' + projectFilename)
 		else:
-			self._ERR(edit, 'No clara settings found in ' + projectFilename)
+			self._ERR(edit, 'No cmake settings found in ' + projectFilename)
 			return
-
-	def run(self, edit):
-		self._diagnose(edit)
-		if self.errorCount == 0:
-			self._printLine(edit, '\nEverything seems to be OK!')
-
 
 	def _printLine(self, edit, str):
 		self.view.insert(edit, self.view.size(), str + '\n')

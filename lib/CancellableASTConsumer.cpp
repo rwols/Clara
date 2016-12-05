@@ -32,7 +32,13 @@ bool CancellableASTConsumer::HandleTopLevelDecl(clang::DeclGroupRef declGroup)
 	// 	throw CancelException();
 	// }
 	// lock.unlock();
-	return !mCreator.mPleaseCancel && ASTConsumer::HandleTopLevelDecl(declGroup);
+	std::unique_lock<std::mutex> lock(mCreator.mCancelMutex);
+	if (mCreator.mPleaseCancel)
+	{
+		throw CancelException();
+	}
+	lock.unlock();
+	return ASTConsumer::HandleTopLevelDecl(declGroup);
 }
 
 } // namespace Clara

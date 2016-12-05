@@ -18,10 +18,10 @@
 # with 8 threads. It should not take more than 3 minutes, while
 # doing a "naked" make can easily keep compiling for more than an hour.
 
-# set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMakeModules;${CMAKE_MODULE_PATH}")
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+project(Clara VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 if (APPLE)
 	set(claraInstallFolderPrefix "$ENV{HOME}/Library/Application Support/Sublime Text 3")
 else()

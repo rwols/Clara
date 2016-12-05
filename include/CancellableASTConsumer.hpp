@@ -1,7 +1,6 @@
 #pragma once
 
 #include <clang/AST/ASTConsumer.h>
-#include <atomic>
 
 namespace Clara {
 

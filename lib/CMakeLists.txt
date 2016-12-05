@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS Core Support)
-if (CMAKE_BUILD_TYPE STREQUAL "")
+if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 elseif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
@@ -11,7 +11,6 @@ set(source_files
 	CodeCompleteConsumer.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
-	PythonGILEnsurer.cpp
 	RenameFunctionASTConsumer.cpp
 	RenameFunctionFrontendAction.cpp
 	RenameFunctionFrontendActionFactory.cpp
@@ -23,7 +22,7 @@ set(PYBIND11_PYTHON_VERSION 3.3)
 set(PYTHON_EXECUTABLE python${PYBIND11_PYTHON_VERSION})
 add_subdirectory(pybind11)
 pybind11_add_module(Clara ${source_files})
-target_link_libraries(Clara clangFrontend clangTooling)
+target_link_libraries(Clara LINK_PRIVATE clangFrontend clangTooling)
 install(TARGETS Clara DESTINATION "${claraInstallFolder}")
 add_custom_target(ClaraInstall 
 	${CMAKE_COMMAND} 

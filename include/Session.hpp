@@ -70,6 +70,8 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
+	void report(const char* message) const;
+
 private:
 
 	friend class CancellableSyntaxOnlyAction;
@@ -77,9 +79,9 @@ private:
 
 	void loadFromOptions(clang::CompilerInstance& instance) const;
 	clang::CompilerInvocation* makeInvocation() const;
-	void report(const char* message) const;
 	void dump();
 	void codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const;
+	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
 
 	SessionOptions mOptions;
 

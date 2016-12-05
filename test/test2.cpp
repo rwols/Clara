@@ -56,13 +56,6 @@ int baz(float x1, float x2)
 
 int main()
 {
-    std::cout << "Hello, world!\n";
-
-    SomeStruct asdf;
-
-    SomeStruct asdf2;
-
-    asdf.
-
+    
     return 0;
 }
