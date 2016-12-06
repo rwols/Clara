@@ -54,8 +54,34 @@ int baz(float x1, float x2)
     return static_cast<int>(x1 + x2);
 }
 
+enum Color { red, green, blue };
+
 int main()
 {
+    baz(10.0f, 20.0f);
+
+    SomeStruct asdf;
+    asdf.what(asdf, 20.0f);
+    baz(10.0f, 20.0f);
+
+    Color color = red;
+    switch (color)
+    {
+        case red:
+            break;
+        case blue:
+            break;
+        case green:
+            break;
+        default:
+            break;
+    }
+
+    baz(10.0f, 20.0f);
+
+    std::ifstream input;
+
     
+
     return 0;
 }

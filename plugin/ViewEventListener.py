@@ -1,12 +1,8 @@
-import sublime, sublime_plugin, tempfile
+import sublime, sublime_plugin, html
 from .Clara import *
-from .DiagnosticPrinter import *
 
 def claraPrint(msg):
 	print('Clara: ' + msg)
-
-def plugin_loaded():
-	claraPrint('Plugin loaded')
 
 class ViewEventListener(sublime_plugin.ViewEventListener):
 	"""Watches views."""
@@ -24,12 +20,15 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def __init__(self, view):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
-		self.phantoms = sublime.PhantomSet(self.view, 'Clara')
+		
 		self.session = None
 		self.point2completions = {}
+		self.diagnosticPhantomSet = sublime.PhantomSet(self.view)
+		self.newPhantoms = []
+
 		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
-		# options.diagnosticPrinter = self.diagnosticPrinter
+		options.diagnosticCallback = self._diagnosticCallback
 		options.logCallback = claraPrint
 		options.codeCompleteCallback = self._completeCallback
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -57,7 +56,6 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
-		options.diagnosticConsumer = DiagnosticPrinter(claraPrint)
 		self.session = Session(options)
 
 	def _loadHeaders(self, key):
@@ -96,78 +94,60 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			col += 1 # clang columns are 1-based, sublime columns are 0-based
 			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completeCallback)
 
-		# if self.point + len(prefix) == point:
-		# 	if self.newCompletions:
-		# 		claraPrint('delivering new completions')
-		# 		completions = self.newCompletions
-		# 		self.newCompletions = None
-		# 		self.point = -1
-		# 		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# 	else:
-		# 		self.view.hide_popup()
-		# 		self.view.show_popup('Still thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
-		# 		return None
-		# else:
-		# 	self.point = point
-		# 	row, col = self.view.rowcol(point)
-		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
-		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
-		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
-		# 	claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
-		# 	self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
-		# 	self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
-		# 	return None
-			
+	def on_post_save(self):
+		claraPrint('on_post_save: {}'.format(self.session.filename))
 
-		# else:
-		# 	row, col = self.view.rowcol(point)
-		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
-		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
-		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
-		# 	completions = self.session.codeComplete(unsavedBuffer, row, col)
-		# 	# print(completions)
-		# 	return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# elif self.noCompletionsFound:
-		# 	self.newCompletions = None
-		# 	self.noCompletionsFound = False
-		# 	return None
-		# elif self.point + len(prefix) == point and self.newCompletions is not None:
-		# 	claraPrint('delivering NEW completions')
-		# 	completions = self.newCompletions
-		# 	self.newCompletions = None
-		# 	self.noCompletionsFound = False
-		# 	return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# elif self.point + len(prefix) == point or self.point == point:
-		# 	if self.newCompletions is not None:
-		# 		self.noCompletionsFound = False
-		# 		completions = self.newCompletions
-		# 		self.newCompletions = None
-		# 		return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-		# else:
-		# 	self.noCompletionsFound = False
-		# 	self.point = point
-		# 	row, col = self.view.rowcol(point)
-		# 	unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
-		# 	row += 1 # clang rows are 1-based, sublime rows are 0-based
-		# 	col += 1 # clang columns are 1-based, sublime columns are 0-based
-		# 	claraPrint('code completing row {}, column {}, prefix {}'.format(row, col, prefix))
-		# 	self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completionCallback)
-		# 	self.view.show_popup('Thinking...', sublime.COOPERATE_WITH_AUTO_COMPLETE, -1)
-		# 	return None
+	def _replaceSingleQuotesByBoldHtml(self, string):
+		parts = string.split("'")
+		result = ''
+		inside = False
+		for i, part in enumerate(parts):
+			part = html.escape(part)
+			result += part
+			inside = not inside
+			if i + 1 == len(parts): continue
+			if inside: result += '<b>'
+			else: result += '</b>'
+		return result
 
-	# def on_modified_async(self):
-		# sublime.set_timeout(self._runCompilation, 3000)
-
-	# def _runCompilation(self):
-	# 	unsavedBuffer = self.view.substr(sublime.Region(0, self.view.size()))
-	# 	claraPrint('placeholder for running a compilation...')
-		# self.session.compileAsync(unsavedBuffer, self._warningCallback, self._errorCallback, self._doneCompilationCallback)
-
-	def _warningCallback(self, message):
-		claraPrint(message)
-
-	def _errorCallback(self, message):
-		claraPrint(message)
+	def _diagnosticCallback(self, filename, level, row, column, message):
+		if filename != '' and filename != self.view.file_name():
+			return
+		divclass = None
+		if level == 'begin':
+			claraPrint('begin was called!')
+			# self.newPhantoms = []
+			# assert isinstance(self.newPhantoms, list)
+			# self.diagnosticPhantomSet.update(self.newPhantoms)
+			return
+		elif level == 'finish':
+			claraPrint('finish was called!')
+			assert isinstance(self.newPhantoms, list)
+			self.diagnosticPhantomSet.update(self.newPhantoms)
+			self.newPhantoms = []
+			return
+		elif level == 'warning':
+			divclass = 'warning'
+		elif level == 'error' or level == 'fatal':
+			divclass = 'error'
+		elif level == 'note':
+			divclass = 'inserted'
+		elif level == 'remark':
+			divclass = 'inserted'
+		else:
+			divclass = 'inserted'
+		point = 0
+		if row != -1 or column != -1:
+			row -= 1
+			column -= -1
+			point = max(0, self.view.text_point(row, column) - 2)
+		region = sublime.Region(point, point)
+		message = self._replaceSingleQuotesByBoldHtml(message)
+		message = '<body id="ClaraDiagnostic"><div class="{}"><i>{}</i></div></body>'.format(divclass, message)
+		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
+		self.newPhantoms.append(phantom)
+		assert isinstance(self.newPhantoms, list)
+		# self.diagnosticPhantomSet.update(self.newPhantoms)
 
 	def _completeCallback(self, row, col, completions):
 		row -= 1 # Clang rows are 1-based, sublime rows are 0-based.
@@ -179,24 +159,10 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		claraPrint('adding point {}'.format(point))
 		if len(completions) == 0:
 			completions = 'FOUND NOTHING'
-		self.point2completions[point] = completions
-		self.view.run_command('hide_auto_complete')
-		self.view.run_command('auto_complete', {
-			'disable_auto_insert': True,
-			'api_completions_only': True,
-			'next_competion_if_showing': False})
-
-	# def _completionCallback(self, completions):
-	# 	claraPrint('completions are ready, rerunning auto completion')
-	# 	self.view.hide_popup()
-	# 	assert self.newCompletions is None
-	# 	self.newCompletions = completions
-	# 	self.view.run_command('hide_auto_complete')
-	# 	self.view.run_command('auto_complete', {
-	# 		'disable_auto_insert': True,
-	# 		'api_completions_only': True,
-	# 		'next_competion_if_showing': False})
-			
-		
-
-
+		else:
+			self.point2completions[point] = completions
+			self.view.run_command('hide_auto_complete')
+			self.view.run_command('auto_complete', {
+				'disable_auto_insert': True,
+				'api_completions_only': True,
+				'next_competion_if_showing': False})

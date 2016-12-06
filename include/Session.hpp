@@ -77,6 +77,7 @@ private:
 	friend class CancellableSyntaxOnlyAction;
 	friend class CodeCompleteConsumer;
 
+	clang::DiagnosticConsumer* createDiagnosticConsumer() const;
 	void loadFromOptions(clang::CompilerInstance& instance) const;
 	clang::CompilerInvocation* makeInvocation() const;
 	void dump();

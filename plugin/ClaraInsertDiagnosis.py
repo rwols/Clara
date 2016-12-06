@@ -88,7 +88,7 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 					self._ERR(edit, 'Did NOT find "{}" in the build folder "{}".\n\
 Clara needs this file to know exactly which compiler arguments are passed to \
 each individual source file for correct auto-completion. \
-Make sure to have the line "set(CMAKE_COMPILE_COMMANDS ON)" in \
+Make sure to have the line "set(CMAKE_EXPORT_COMPILE_COMMANDS ON)" in \
 your top-level CMakeLists.txt file, or pass it as a command line argument \
 to your cmake invocation. Alternatively, perhaps you still need to configure \
 your cmake project.'.format(COMPILE_COMMANDS, buildFolder))

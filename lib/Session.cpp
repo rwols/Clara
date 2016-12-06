@@ -21,53 +21,9 @@
 
 namespace Clara {
 
-class SimplePrinter : public DiagnosticConsumer
-{
-public:
-	SimplePrinter(Session& owner) : mOwner(owner) {}
-	~SimplePrinter() override = default;
-	void handleNote(const std::string& filename, int row, int column, const std::string& message) override
-	{
-		reportMsg("NOTE   ", filename, row, column, message);
-	}
-	void handleRemark(const std::string& filename, int row, int column, const std::string& message) override
-	{
-		reportMsg("REMARK ", filename, row, column, message);
-	}
-	void handleWarning(const std::string& filename, int row, int column, const std::string& message) override
-	{
-		reportMsg("WARNING", filename, row, column, message);
-	}
-	void handleError(const std::string& filename, int row, int column, const std::string& message) override
-	{
-		reportMsg("ERROR  ", filename, row, column, message);
-	}
-	void handleFatalError(const std::string& filename, int row, int column, const std::string& message) override
-	{
-		reportMsg("FATAL  ", filename, row, column, message);
-	}
-private:
-	void reportMsg(const char* prefix, const std::string& filename, int row, int column, const std::string& message)
-	{
-		std::string msg(prefix);
-		msg.append(": ");
-		if (!filename.empty())
-		{
-			msg.append(filename);
-			msg.append(":").append(std::to_string(row));
-			msg.append(":").append(std::to_string(column));
-			msg.append(": ");
-		}
-		msg.append(message);
-		mOwner.report(msg.c_str());
-	}
-	Session& mOwner;
-};
-
 Session::Session(const SessionOptions& options)
 : mOptions(options)
 {
-	mOptions.diagnosticConsumer = std::make_shared<SimplePrinter>(*this);
 }
 
 clang::CompilerInvocation* Session::makeInvocation() const
@@ -124,7 +80,7 @@ void Session::loadFromOptions(clang::CompilerInstance& instance) const
 
 	if (!mOptions.jsonCompileCommands.empty())
 	{
-		report("Attemping to load JSON compilation database.");
+		// report("Attemping to load JSON compilation database.");
 		std::string errorMsg;
 		auto compdb = CompilationDatabase::autoDetectFromDirectory(mOptions.jsonCompileCommands, errorMsg);
 		if (compdb)
@@ -146,18 +102,15 @@ void Session::loadFromOptions(clang::CompilerInstance& instance) const
 						else
 						{
 							cstrings.push_back(str.c_str());
-							// report(cstrings.back());
 						}
 					}
 				}
-				auto& diagnostics = instance.getDiagnostics();
-				diagnostics.setClient(mOptions.diagnosticConsumer.get(), false);
-				invocation = createInvocationFromCommandLine(cstrings, &diagnostics);
+				// diagnostics.setClient(mOptions.diagnosticConsumer, false);
+				invocation = createInvocationFromCommandLine(cstrings, &instance.getDiagnostics());
 				if (invocation)
 				{
 					invocation->getFileSystemOpts().WorkingDir = compileCommands[0].Directory;
 					fillInvocationWithStandardHeaderPaths(invocation);
-					report("Succesfully loaded compile commands.");
 				}
 				else
 				{
@@ -186,12 +139,24 @@ void Session::loadFromOptions(clang::CompilerInstance& instance) const
 	instance.setInvocation(invocation);
 }
 
+clang::DiagnosticConsumer* Session::createDiagnosticConsumer() const
+{
+	// Need this lock because we are copying a python object.
+	pybind11::gil_scoped_acquire pythonLock;
+	return new Clara::DiagnosticConsumer
+	(
+		const_cast<Session*>(this)->mOptions.diagnosticCallback
+	);
+}
+
 void Session::codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const
 {
 	using namespace clang;
-	loadFromOptions(instance);
-	instance.setSourceManager(nullptr);
 	instance.createDiagnostics();
+	instance.getDiagnostics().setClient(createDiagnosticConsumer());
+	CodeCompleteOptions codeCompleteOptions;
+	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
+	loadFromOptions(instance);
 	auto& frontendOptions = instance.getFrontendOpts();
 	frontendOptions.CodeCompletionAt.FileName = getFilename();
 	frontendOptions.CodeCompletionAt.Line = row;
@@ -213,9 +178,6 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 	using namespace clang::frontend;
 	pybind11::gil_scoped_release release;
 	CompilerInstance instance;
-	instance.createDiagnostics();
-	CodeCompleteOptions codeCompleteOptions;
-	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 	codeCompletePrepare(instance, unsavedBuffer, row, column);
 	std::vector<std::pair<std::string, std::string>> result;
 	SyntaxOnlyAction action;
@@ -226,7 +188,7 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 	}
 	else
 	{
-		report("Completion run FAILED.");
+		report("There were errors in the text buffer.");
 	}
 	return result;
 }
@@ -239,19 +201,14 @@ void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, 
 	std::thread task( [this, row, column, callback, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
 		CompilerInstance instance;
-		instance.createDiagnostics();
-		CodeCompleteOptions codeCompleteOptions;
-		instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 		codeCompletePrepare(instance, unsavedBuffer.c_str(), row, column);
 		std::vector<std::pair<std::string, std::string>> result;
 		SyntaxOnlyAction action;
-		if (instance.ExecuteAction(action))
-		{
-			auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
-			consumer->moveResult(result);
-			pybind11::gil_scoped_acquire pythonLock;
-			callback(row, column, result);
-		}
+		if (!instance.ExecuteAction(action)) report("There were errors in the text buffer.");
+		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
+		consumer->moveResult(result);
+		pybind11::gil_scoped_acquire pythonLock;
+		callback(row, column, result);
 	});
 	task.detach();
 }
@@ -267,6 +224,8 @@ void Session::report(const char* message) const
 	if (message != nullptr && mOptions.logCallback != pybind11::object())
 	{
 		// yeah this is horrible.
+		// but Python has no concept of const,
+		// so it somehow works fine.
 		const_cast<Session*>(this)->mOptions.logCallback(message);
 	}
 }

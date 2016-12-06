@@ -14,7 +14,7 @@ struct SessionOptions
 {
 	pybind11::object logCallback;
 	pybind11::object codeCompleteCallback;
-	std::shared_ptr<Clara::DiagnosticConsumer> diagnosticConsumer = nullptr;
+	pybind11::object diagnosticCallback;
 	std::string filename;
 	std::vector<std::string> systemHeaders;
 	std::string builtinHeaders;

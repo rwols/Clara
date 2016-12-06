@@ -8,16 +8,16 @@
 			"variants":
 			[
 				{
-					"name": "ClaraPlugin",
-					"shell_cmd": "make ClaraPlugin -j4"
+					"name": "Clara",
+					"shell_cmd": "cmake --build . --target Clara"
 				},
 				{
 					"name": "ClaraInstall",
-					"shell_cmd": "make ClaraInstall -j4"
+					"shell_cmd": "cmake --build . --target ClaraInstall"
 				},
 				{
-					"name": "Clara",
-					"shell_cmd": "make Clara -j4"
+					"name": "ClaraPlugin",
+					"shell_cmd": "cmake --build . --target ClaraPlugin"
 				}
 			],
 			"working_dir": "${project_path}/../../../../build"
@@ -29,8 +29,10 @@
 		"command_line_overrides":
 		{
 			"LLVM_ENABLE_EH": true,
-			"LLVM_ENABLE_RTTI": true
+			"LLVM_ENABLE_RTTI": true,
+			"CMAKE_BUILD_TYPE": "Debug"
 		},
+		"generator": "Ninja",
 		"filter_targets":
 		[
 			"Clara",

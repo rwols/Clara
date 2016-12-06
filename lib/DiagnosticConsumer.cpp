@@ -5,46 +5,55 @@
 
 namespace Clara {
 
+DiagnosticConsumer::DiagnosticConsumer(pybind11::object callback)
+: mCallback(callback)
+{
+
+}
+
 void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, const clang::Preprocessor* pp)
 {
 	clang::DiagnosticConsumer::BeginSourceFile(options, pp);
 	mSourceMgr = pp == nullptr ? nullptr : &(pp->getSourceManager());
+	pybind11::gil_scoped_acquire pythonLock;
+	if (mCallback == pybind11::object()) return;
+	else mCallback(std::string(), "begin", -1, -1, std::string());
 }
 
 void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, const clang::Diagnostic& info)
 {
 	clang::DiagnosticConsumer::HandleDiagnostic(level, info);
-	llvm::SmallString<100> message;
+	llvm::SmallString<128> message;
 	info.FormatDiagnostic(message);
-	#ifndef NDEBUG
-	llvm::errs() << "DIAG MSG: " << message << '\n';
-	#endif // NDEBUG
 	const auto presumedLoc = makePresumedLoc(info);
-	switch (level) 
+	switch (level)
 	{
 		case clang::DiagnosticsEngine::Note:
-			if (presumedLoc.isValid()) handleNote(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
-			else handleNote(std::string(), -1, -1, message.c_str());
-			break;
-		case clang::DiagnosticsEngine::Warning:
-			if (presumedLoc.isValid()) handleWarning(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
-			else handleWarning(std::string(), -1, -1, message.c_str());
+			doCallback("note", presumedLoc, message.c_str());
 			break;
 		case clang::DiagnosticsEngine::Remark:
-			if (presumedLoc.isValid()) handleRemark(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
-			else handleRemark(std::string(), -1, -1, message.c_str());
+			doCallback("remark", presumedLoc, message.c_str());
+			break;
+		case clang::DiagnosticsEngine::Warning:
+			doCallback("warning", presumedLoc, message.c_str());
 			break;
 		case clang::DiagnosticsEngine::Error:
-			if (presumedLoc.isValid()) handleError(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
-			else handleError(std::string(), -1, -1, message.c_str());
+			doCallback("error", presumedLoc, message.c_str());
 			break;
 		case clang::DiagnosticsEngine::Fatal:
-			if (presumedLoc.isValid()) handleFatalError(presumedLoc.getFilename(), presumedLoc.getLine(), presumedLoc.getColumn(), message.c_str());
-			else handleFatalError(std::string(), -1, -1, message.c_str());
+			doCallback("fatal", presumedLoc, message.c_str());
 			break;
 		default:
 			break;
 	}
+}
+
+void DiagnosticConsumer::finish()
+{
+	clang::DiagnosticConsumer::finish();
+	pybind11::gil_scoped_acquire pythonLock;
+	if (mCallback == pybind11::object()) return;
+	else mCallback(std::string(), "finish", -1, -1, std::string());
 }
 
 clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& info) const
@@ -56,6 +65,20 @@ clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& 
 	else
 	{
 		return clang::PresumedLoc(nullptr, -1, -1, clang::SourceLocation());
+	}
+}
+
+void DiagnosticConsumer::doCallback(const char* messageType, const clang::PresumedLoc& presumedLoc, const char* message)
+{
+	pybind11::gil_scoped_acquire pythonLock;
+	if (mCallback == pybind11::object()) return;
+	if (presumedLoc.isValid())
+	{
+		mCallback(presumedLoc.getFilename(), messageType, presumedLoc.getLine(), presumedLoc.getColumn(), message);
+	}
+	else
+	{
+		mCallback(std::string(), messageType, -1, -1, message);
 	}
 }
 
