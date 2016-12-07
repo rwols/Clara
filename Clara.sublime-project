@@ -57,6 +57,11 @@
 	],
 	"settings":
 	{
+		"flags_sources":
+		{
+			"file": "compile_commands.json", 
+			"search_in": "${project_path}/../../../../build"
+		},
 		"tab_size": 4
 	}
 }

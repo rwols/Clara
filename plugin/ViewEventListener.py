@@ -4,6 +4,22 @@ from .Clara import *
 def claraPrint(msg):
 	print('Clara: ' + msg)
 
+# FIXME: Replace stubs
+def verifyVersion(version):
+	return 3126 <= int(version)
+
+# FIXME: Replace stubs
+def verifyPlatform(platform):
+	return True
+
+# FIXME: Add error messages
+def plugin_loaded():
+	if not verifyVersion(sublime.version()):
+		sublime.error_message('Clara version mismatch.')
+	if not verifyPlatform(sublime.platform()):
+		sublime.error_message('Clara platform mismatch.')
+
+
 class ViewEventListener(sublime_plugin.ViewEventListener):
 	"""Watches views."""
 
@@ -22,7 +38,13 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		super(ViewEventListener, self).__init__(view)
 		
 		self.session = None
+
+		# point -> list of tuples
 		self.point2completions = {}
+
+		# set of points (unordered) (python could use an ordered set datastructure)
+		self.inFlightCompletionAtPoint = set()
+
 		self.diagnosticPhantomSet = sublime.PhantomSet(self.view)
 		self.newPhantoms = []
 
@@ -87,12 +109,17 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 				claraPrint('found completions!')
 				return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 		else:
-			claraPrint('found no completions. Calling Session::codeCompleteAsync.')
-			row, col = self.view.rowcol(point)
-			unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
-			row += 1 # clang rows are 1-based, sublime rows are 0-based
-			col += 1 # clang columns are 1-based, sublime columns are 0-based
-			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completeCallback)
+			if point in self.inFlightCompletionAtPoint:
+				claraPrint('Already completing at point {}, so wait.'.format(point))
+				return None
+			else:
+				claraPrint('found no completions. Calling Session::codeCompleteAsync.')
+				self.inFlightCompletionAtPoint.add(point)
+				row, col = self.view.rowcol(point)
+				unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
+				row += 1 # clang rows are 1-based, sublime rows are 0-based
+				col += 1 # clang columns are 1-based, sublime columns are 0-based
+				self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completeCallback)
 
 	def on_post_save(self):
 		claraPrint('on_post_save: {}'.format(self.session.filename))
@@ -112,29 +139,35 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 
 	def _diagnosticCallback(self, filename, level, row, column, message):
 		if filename != '' and filename != self.view.file_name():
+			claraPrint('Received file which is not this file. No support for that yet.')
 			return
 		divclass = None
 		if level == 'begin':
-			claraPrint('begin was called!')
+			claraPrint('BEGIN DIAGNOSIS'.format(filename))
 			# self.newPhantoms = []
 			# assert isinstance(self.newPhantoms, list)
 			# self.diagnosticPhantomSet.update(self.newPhantoms)
 			return
 		elif level == 'finish':
-			claraPrint('finish was called!')
+			claraPrint('END DIAGNOSIS'.format(filename))
 			assert isinstance(self.newPhantoms, list)
 			self.diagnosticPhantomSet.update(self.newPhantoms)
 			self.newPhantoms = []
 			return
 		elif level == 'warning':
+			claraPrint('{}, warning, {}, {}, {}'.format(filename, row, column, message))
 			divclass = 'warning'
 		elif level == 'error' or level == 'fatal':
+			claraPrint('{}, error, {}, {}, {}'.format(filename, row, column, message))
 			divclass = 'error'
 		elif level == 'note':
+			claraPrint('{}, note, {}, {}, {}'.format(filename, row, column, message))
 			divclass = 'inserted'
 		elif level == 'remark':
+			claraPrint('{}, remark, {}, {}, {}'.format(filename, row, column, message))
 			divclass = 'inserted'
 		else:
+			claraPrint('{}, unkown, {}, {}, {}'.format(filename, row, column, message))
 			divclass = 'inserted'
 		point = 0
 		if row != -1 or column != -1:
@@ -146,13 +179,12 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		message = '<body id="ClaraDiagnostic"><div class="{}"><i>{}</i></div></body>'.format(divclass, message)
 		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
 		self.newPhantoms.append(phantom)
-		assert isinstance(self.newPhantoms, list)
-		# self.diagnosticPhantomSet.update(self.newPhantoms)
 
 	def _completeCallback(self, row, col, completions):
 		row -= 1 # Clang rows are 1-based, sublime rows are 0-based.
 		col -= 1 # Clang columns are 1-based, sublime columns are 0-based.
 		point = self.view.text_point(row, col)
+		self.inFlightCompletionAtPoint.discard(point)
 		if point in self.point2completions:
 			claraPrint('point {} is already in my completion dictionary. :-( too late!'.format(point))
 			return
@@ -161,7 +193,8 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			completions = 'FOUND NOTHING'
 		else:
 			self.point2completions[point] = completions
-			self.view.run_command('hide_auto_complete')
+			if self.view.is_auto_complete_visible():
+				self.view.run_command('hide_auto_complete')
 			self.view.run_command('auto_complete', {
 				'disable_auto_insert': True,
 				'api_completions_only': True,

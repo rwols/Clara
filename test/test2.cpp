@@ -77,9 +77,9 @@ int main()
             break;
     }
 
-    baz(10.0f, 20.0f);
+    baz(30.0f, 40.0f);
 
-    std::ifstream input;
+    baz(20.f, 30.f);
 
     
 

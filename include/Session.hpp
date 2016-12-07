@@ -5,6 +5,7 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <functional>
 #include "CancellableSyntaxOnlyAction.hpp"
+#include "DiagnosticConsumer.hpp"
 
 namespace Clara {
 
@@ -85,12 +86,7 @@ private:
 	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
 
 	SessionOptions mOptions;
-
-	// std::string mFilename;
-
-	// clang::CompilerInstance mInstance;
-
-	// CancellableSyntaxOnlyAction mAction;
+	Clara::DiagnosticConsumer mDiagConsumer;
 };
 
 } // namespace Clara

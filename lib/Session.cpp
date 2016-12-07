@@ -23,7 +23,9 @@ namespace Clara {
 
 Session::Session(const SessionOptions& options)
 : mOptions(options)
+, mDiagConsumer(mOptions.diagnosticCallback)
 {
+
 }
 
 clang::CompilerInvocation* Session::makeInvocation() const
@@ -136,6 +138,9 @@ void Session::loadFromOptions(clang::CompilerInstance& instance) const
 		invocation = makeInvocation();
 	}
 
+	invocation->getLangOpts()->SpellChecking = false;
+	invocation->getDiagnosticOpts().IgnoreWarnings = true;
+
 	instance.setInvocation(invocation);
 }
 
@@ -153,7 +158,7 @@ void Session::codeCompletePrepare(clang::CompilerInstance& instance, const char*
 {
 	using namespace clang;
 	instance.createDiagnostics();
-	instance.getDiagnostics().setClient(createDiagnosticConsumer());
+	instance.getDiagnostics().setClient(const_cast<Clara::DiagnosticConsumer*>(&mDiagConsumer), /*ownsClient*/ false);
 	CodeCompleteOptions codeCompleteOptions;
 	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
 	loadFromOptions(instance);
