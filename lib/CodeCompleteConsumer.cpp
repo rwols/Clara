@@ -1,14 +1,21 @@
-#include "PyBind11.hpp"
 #include "CodeCompleteConsumer.hpp"
-#include "Session.hpp"
+#include "PyBind11.hpp"
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
 
-CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, const Session& owner)
+CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, 
+	clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
+	std::string filename, int row, int column)
 : clang::CodeCompleteConsumer(options, false)
-, mOwner(owner)
+, DiagOpts(new clang::DiagnosticOptions)
+, Diag(new clang::DiagnosticsEngine(clang::IntrusiveRefCntPtr<clang::DiagnosticIDs>(new clang::DiagnosticIDs), &*DiagOpts))
+, FileMgr(fileManager)
+, SourceMgr(new clang::SourceManager(*Diag, *FileMgr))
+, mFilename(std::move(filename))
+, mRow(row)
+, mColumn(column)
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */
@@ -22,6 +29,7 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 {
 	// Clear the list, from other runs.
 	mResultList.clear();
+    mResultList.reserve(numResults);
 
 	std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
 	{
@@ -30,7 +38,15 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 
 	for (unsigned i = 0; i < numResults; ++i) 
 	{
-		mResultList.emplace_back(ProcessCodeCompleteResult(sema, context, results[i]));
+        if (results[i].Availability == CXAvailability_NotAvailable ||
+            results[i].Availability == CXAvailability_NotAccessible)
+        {
+            continue;
+        }
+        else
+        {
+            mResultList.emplace_back(ProcessCodeCompleteResult(sema, context, results[i]));
+        }
 	}
 }
 
@@ -50,7 +66,6 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 {
 	using namespace clang;
 
-	std::pair<std::string, std::string> pair;
 	std::string first, second, informative;
 	unsigned argCount = 0;
 
@@ -117,14 +132,8 @@ std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteRes
 		first += "\t";
 		first += informative;
 	}
-
-	pair.first = std::move(first);
-	pair.second = std::move(second);
-	// {
-	// 	std::string msg = "Completion: " + pair.second;
-	// 	mOwner.report(msg.c_str());
-	// }
-	return pair;
+    
+    return std::make_pair<std::string, std::string>(std::move(first), std::move(second));
 }
 
 void CodeCompleteConsumer::ProcessCodeCompleteString(

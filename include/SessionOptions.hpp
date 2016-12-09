@@ -19,6 +19,8 @@ struct SessionOptions
 	std::vector<std::string> systemHeaders;
 	std::string builtinHeaders;
 	std::string jsonCompileCommands;
+	std::string workingDirectory;
+	std::vector<std::string> invocation;
 	clang::LangStandard::Kind languageStandard;
 	bool codeCompleteIncludeMacros = true;
 	bool codeCompleteIncludeCodePatterns = true;

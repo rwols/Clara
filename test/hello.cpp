@@ -1,3 +1,5 @@
+#include <iostream>
+
 /**
  * @brief      Adds two integers together.
  *
@@ -51,14 +53,12 @@ private:
 	const char* mIdentifier;
 };
 
-#include <iostream>
-
 int main()
 {
 	MyClass asdf("hello, world!");	
 	std::cout << asdf.getName() << '\n';
-	MyClass qwert("hello, world");
-	std::cout << qwert.getName() << '\n';
+
+	asdf.
 
   	return 0;    
 }

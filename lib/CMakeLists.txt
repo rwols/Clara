@@ -9,6 +9,7 @@ set(source_files
 	CancellableASTConsumer.cpp
 	CancellableSyntaxOnlyAction.cpp
 	CodeCompleteConsumer.cpp
+	CompilationDatabase.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
 	RenameFunctionASTConsumer.cpp

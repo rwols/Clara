@@ -79,9 +79,5 @@ int main()
 
     baz(30.0f, 40.0f);
 
-    baz(20.f, 30.f);
-
-    
-
     return 0;
 }

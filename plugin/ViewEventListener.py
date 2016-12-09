@@ -1,8 +1,10 @@
-import sublime, sublime_plugin, html
+import sublime, sublime_plugin, html, time, datetime
 from .Clara import *
+from .EventListener import *
 
-def claraPrint(msg):
-	print('Clara: ' + msg)
+def claraPrint(message):
+	t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
+	print('Clara:{}: {}'.format(t, message))
 
 # FIXME: Replace stubs
 def verifyVersion(version):
@@ -18,7 +20,6 @@ def plugin_loaded():
 		sublime.error_message('Clara version mismatch.')
 	if not verifyPlatform(sublime.platform()):
 		sublime.error_message('Clara platform mismatch.')
-
 
 class ViewEventListener(sublime_plugin.ViewEventListener):
 	"""Watches views."""
@@ -48,6 +49,9 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		self.diagnosticPhantomSet = sublime.PhantomSet(self.view)
 		self.newPhantoms = []
 
+		if not hasCorrectExtension(self.view.file_name()):
+			return
+
 		claraPrint('Loading ' + self.view.file_name())
 		options = SessionOptions()
 		options.diagnosticCallback = self._diagnosticCallback
@@ -59,25 +63,34 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		builtinHeaders = self._loadHeaders('builtin_headers')
 		options.systemHeaders = [""] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
-		if options.filename.endswith('.hpp') or options.filename.endswith('.h'):
-			options.jsonCompileCommands == ""
-		else:
-			try:
-				project = self.view.window().project_data()
-				if project is None: raise Exception('No sublime-project found.')
-				cmakeSettings = project.get('cmake')
-				if cmakeSettings is None: raise Exception('No cmake settings found in sublime-project file.')
-				cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
-				rootFolder = cmakeSettings.get('root_folder')
-				buildFolder = cmakeSettings.get('build_folder')
-				options.jsonCompileCommands = "" if buildFolder is None else buildFolder
-			except Exception as e:
-				claraPrint(str(e))
+		# if options.filename.endswith('.hpp') or options.filename.endswith('.h'):
+		# 	options.jsonCompileCommands == ""
+		# else:
+		# 	try:
+		# 		project = self.view.window().project_data()
+		# 		if project is None: raise Exception('No sublime-project found.')
+		# 		cmakeSettings = project.get('cmake')
+		# 		if cmakeSettings is None: raise Exception('No cmake settings found in sublime-project file.')
+		# 		cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
+		# 		rootFolder = cmakeSettings.get('root_folder')
+		# 		buildFolder = cmakeSettings.get('build_folder')
+		# 		options.jsonCompileCommands = "" if buildFolder is None else buildFolder
+		# 	except Exception as e:
+		# 		claraPrint(str(e))
 
 		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
+
+		compdb = EventListener.getCompilationDatabase(self.view)
+		if compdb:
+			options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
+			claraPrint(options.invocation)
+			claraPrint(options.workingDirectory)
+		else:
+			claraPrint('No compilation database found for "{}"'.format(self.view.file_name()))
+
 		self.session = Session(options)
 
 	def _loadHeaders(self, key):
@@ -139,7 +152,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 
 	def _diagnosticCallback(self, filename, level, row, column, message):
 		if filename != '' and filename != self.view.file_name():
-			claraPrint('Received file which is not this file. No support for that yet.')
+			claraPrint("{}: {}:{}:{}: {}".format(level, filename, str(row), str(column), message))
 			return
 		divclass = None
 		if level == 'begin':
@@ -180,7 +193,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
 		self.newPhantoms.append(phantom)
 
-	def _completeCallback(self, row, col, completions):
+	def _completeCallback(self, filename, row, col, completions):
 		row -= 1 # Clang rows are 1-based, sublime rows are 0-based.
 		col -= 1 # Clang columns are 1-based, sublime columns are 0-based.
 		point = self.view.text_point(row, col)

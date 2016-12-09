@@ -10,6 +10,8 @@ struct World
 struct ASDF
 {
 	float another;
+private:
+    int hidden;
 };
 
 int main()
@@ -18,6 +20,8 @@ int main()
     world.data = 5;
 
     world.add(6, 10);
+
+    ASDF asdf;
 
     return 0;
 }

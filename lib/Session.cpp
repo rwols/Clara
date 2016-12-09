@@ -1,31 +1,63 @@
 #include "Session.hpp"
-#include "CodeCompleteConsumer.hpp"
-#include "StringException.hpp"
-#include "CancelException.hpp"
-#include "DiagnosticConsumer.hpp"
-#include "SessionOptions.hpp"
-#include <thread>
-#include <mutex>
-#include <condition_variable>
-#include <clang/Basic/TargetInfo.h>
-#include <clang/Sema/CodeCompleteConsumer.h>
-#include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Lex/PreprocessorOptions.h>
-#include <clang/Lex/Preprocessor.h>
-#include <clang/Lex/HeaderSearch.h>
-#include <clang/Frontend/FrontendActions.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
-
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
-namespace Clara {
+using namespace Clara;
 
 Session::Session(const SessionOptions& options)
 : mOptions(options)
+, mFileMgr(new clang::FileManager(mFileOpts))
+, mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
+, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
 {
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+	mDiags->setClient(&mDiagConsumer, false);
+	pybind11::gil_scoped_release releaser;
 
+	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
+	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
+		invocation.get(), 
+		mPchOps, 
+		mDiags, 
+		mFileMgr.get(),
+		/*OnlyLocalDecls*/ false, 
+		/*CaptureDiagnostics*/ false, 
+		/*PrecompilePreambleAfterNParses*/ 0,
+		/*TranslationUnitKind*/ clang::TU_Complete, 
+		/*CacheCodeCompletionResults*/ false,
+		/*IncludeBriefCommentsInCodeCompletion*/ mOptions.codeCompleteIncludeBriefComments, 
+		/*UserFilesAreVolatile*/ false);
+
+	const auto& preamble = mUnit->getPreambleData();
+	std::string message("Number of lines in the preamble of \"");
+	message.append(mOptions.filename);
+	message.append("\" is ");
+	message.append(std::to_string(preamble.getNumLines()));
+	report(message.c_str());
+}
+
+clang::CompilerInvocation* Session::createInvocationFromOptions()
+{
+	using namespace clang;
+	if (!mOptions.invocation.empty())
+	{
+		std::vector<const char*> commandLine;
+		for (const auto& str : mOptions.invocation) commandLine.push_back(str.c_str());
+		auto invocation = createInvocationFromCommandLine(commandLine, mDiags);
+		if (invocation)
+		{
+			invocation->getFileSystemOpts().WorkingDir = mOptions.workingDirectory;
+			mFileOpts.WorkingDir = mOptions.workingDirectory;
+			fillInvocationWithStandardHeaderPaths(invocation);
+			return invocation;
+		}
+	}
+	report("Compiler invocation failed.");
+	return makeInvocation();
 }
 
 clang::CompilerInvocation* Session::makeInvocation() const
@@ -73,147 +105,74 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	}
 }
 
-void Session::loadFromOptions(clang::CompilerInstance& instance) const
-{
-	using namespace clang;
-	using namespace clang::tooling;
-
-	CompilerInvocation* invocation;
-
-	if (!mOptions.jsonCompileCommands.empty())
-	{
-		// report("Attemping to load JSON compilation database.");
-		std::string errorMsg;
-		auto compdb = CompilationDatabase::autoDetectFromDirectory(mOptions.jsonCompileCommands, errorMsg);
-		if (compdb)
-		{
-			auto compileCommands = compdb->getCompileCommands(getFilename());
-			if (!compileCommands.empty())
-			{
-				std::vector<const char*> cstrings;
-				for (const auto& compileCommand : compileCommands)
-				{
-					// Skip first argument, because that's the path to the compiler.
-					for (std::size_t i = 1; i < compileCommand.CommandLine.size(); ++i)
-					{
-						const auto& str = compileCommand.CommandLine[i];
-						if (str.find("-o") != std::string::npos)
-						{
-							++i;
-						}
-						else
-						{
-							cstrings.push_back(str.c_str());
-						}
-					}
-				}
-				// diagnostics.setClient(mOptions.diagnosticConsumer, false);
-				invocation = createInvocationFromCommandLine(cstrings, &instance.getDiagnostics());
-				if (invocation)
-				{
-					invocation->getFileSystemOpts().WorkingDir = compileCommands[0].Directory;
-					fillInvocationWithStandardHeaderPaths(invocation);
-				}
-				else
-				{
-					report("Compiler invocation failed.");
-					invocation = makeInvocation();
-				}
-			}
-			else
-			{
-				report("Could not find compile commands.");
-				invocation = makeInvocation();
-			}
-		}
-		else
-		{
-			report(errorMsg.c_str());
-			invocation = makeInvocation();
-		}
-	}
-	else
-	{
-		report("No JSON compilation database specified.");
-		invocation = makeInvocation();
-	}
-
-	invocation->getLangOpts()->SpellChecking = false;
-	invocation->getDiagnosticOpts().IgnoreWarnings = true;
-
-	instance.setInvocation(invocation);
-}
-
-clang::DiagnosticConsumer* Session::createDiagnosticConsumer() const
-{
-	// Need this lock because we are copying a python object.
-	pybind11::gil_scoped_acquire pythonLock;
-	return new Clara::DiagnosticConsumer
-	(
-		const_cast<Session*>(this)->mOptions.diagnosticCallback
-	);
-}
-
-void Session::codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const
-{
-	using namespace clang;
-	instance.createDiagnostics();
-	instance.getDiagnostics().setClient(const_cast<Clara::DiagnosticConsumer*>(&mDiagConsumer), /*ownsClient*/ false);
-	CodeCompleteOptions codeCompleteOptions;
-	instance.setCodeCompletionConsumer(new Clara::CodeCompleteConsumer(codeCompleteOptions, *this));
-	loadFromOptions(instance);
-	auto& frontendOptions = instance.getFrontendOpts();
-	frontendOptions.CodeCompletionAt.FileName = getFilename();
-	frontendOptions.CodeCompletionAt.Line = row;
-	frontendOptions.CodeCompletionAt.Column = column;
-	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, getFilename());
-	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
-	auto& preprocessorOptions = instance.getPreprocessorOpts();
-	for (auto& remappedFile : preprocessorOptions.RemappedFileBuffers)
-	{
-		delete remappedFile.second;
-	}
-	preprocessorOptions.RemappedFileBuffers.clear();
-	preprocessorOptions.RemappedFileBuffers.emplace_back(getFilename(), memBuffer.release());
-}
-
-std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column) const
+std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
 	using namespace clang::frontend;
-	pybind11::gil_scoped_release release;
-	CompilerInstance instance;
-	codeCompletePrepare(instance, unsavedBuffer, row, column);
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+	pybind11::gil_scoped_release releaser;
+	SmallVector<ASTUnit::RemappedFile, 1> remappedFiles;
+	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mOptions.filename);
+	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
+	remappedFiles.push_back({mOptions.filename, memBuffer.release()});
+
+	clang::CodeCompleteOptions mCcOpts;
+	mCcOpts.IncludeMacros = mOptions.codeCompleteIncludeMacros ? 1 : 0;
+	mCcOpts.IncludeCodePatterns = mOptions.codeCompleteIncludeCodePatterns ? 1 : 0;
+	mCcOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
+	mCcOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
+	Clara::CodeCompleteConsumer consumer(mCcOpts, mFileMgr, mOptions.filename, row, column);
+	consumer.Diag->setClient(&mDiagConsumer, false);
+	consumer.LangOpts = mUnit->getLangOpts();
+
+	mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
+		mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
+		mOptions.codeCompleteIncludeBriefComments, consumer,
+		mPchOps, *consumer.Diag, consumer.LangOpts, 
+		*consumer.SourceMgr, *consumer.FileMgr, consumer.Diagnostics, consumer.TemporaryBuffers);
+
 	std::vector<std::pair<std::string, std::string>> result;
-	SyntaxOnlyAction action;
-	if (instance.ExecuteAction(action))
-	{
-		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
-		consumer->moveResult(result);
-	}
-	else
-	{
-		report("There were errors in the text buffer.");
-	}
+	mCodeCompleteConsumer->moveResult(result);
 	return result;
 }
 
-void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback) const
+void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
 	using namespace clang::frontend;
-	
-	std::thread task( [this, row, column, callback, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+    std::thread task( [this, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
-		CompilerInstance instance;
-		codeCompletePrepare(instance, unsavedBuffer.c_str(), row, column);
-		std::vector<std::pair<std::string, std::string>> result;
-		SyntaxOnlyAction action;
-		if (!instance.ExecuteAction(action)) report("There were errors in the text buffer.");
-		auto consumer = static_cast<Clara::CodeCompleteConsumer*>(&instance.getCodeCompletionConsumer());
-		consumer->moveResult(result);
-		pybind11::gil_scoped_acquire pythonLock;
-		callback(row, column, result);
+		using namespace clang;
+		using namespace clang::frontend;
+        SmallVector<ASTUnit::RemappedFile, 1> remappedFiles;
+        auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(unsavedBuffer);
+        remappedFiles.emplace_back(mOptions.filename, memBuffer.get());
+
+		clang::CodeCompleteOptions ccOpts;
+		ccOpts.IncludeMacros = mOptions.codeCompleteIncludeMacros ? 1 : 0;
+		ccOpts.IncludeCodePatterns = mOptions.codeCompleteIncludeCodePatterns ? 1 : 0;
+		ccOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
+		ccOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
+        
+        Clara::CodeCompleteConsumer consumer(ccOpts, mFileMgr, mOptions.filename, row, column);
+        consumer.Diag->setClient(&mDiagConsumer, false);
+		mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
+			mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
+			mOptions.codeCompleteIncludeBriefComments, consumer,
+			mPchOps, *consumer.Diag, consumer.LangOpts, 
+			*consumer.SourceMgr, *consumer.FileMgr, consumer.Diagnostics, consumer.TemporaryBuffers);
+        std::vector<std::pair<std::string, std::string>> results;
+        consumer.moveResult(results);
+        try
+        {
+            pybind11::gil_scoped_acquire pythonLock;
+            callback(mOptions.filename, row, column, results);
+        }
+        catch (const std::exception& err)
+        {
+            report(err.what());
+        }
 	});
 	task.detach();
 }
@@ -235,8 +194,3 @@ void Session::report(const char* message) const
 	}
 }
 
-Session::~Session()
-{
-}
-
-} // namespace Clara

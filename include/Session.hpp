@@ -1,11 +1,13 @@
 #pragma once
 
 #include "SessionOptions.hpp"
-#include <string>
-#include <clang/Frontend/CompilerInstance.h>
-#include <functional>
 #include "CancellableSyntaxOnlyAction.hpp"
 #include "DiagnosticConsumer.hpp"
+#include "CodeCompleteConsumer.hpp"
+
+#include <clang/Frontend/PCHContainerOperations.h>
+
+#include <thread>
 
 namespace Clara {
 
@@ -18,19 +20,12 @@ class Session
 {
 public:
 
-	// pybind11::object reporter;
-
 	/**
 	 * @brief      Constructs a new session.
 	 *
 	 * @param[in]  options  The options
 	 */
 	Session(const SessionOptions& options);
-
-	/**
-	 * @brief      Destroys the object.
-	 */
-	~Session();
 
 	/**
 	 * @brief      Given a buffer that represents the unsaved file contents of
@@ -45,7 +40,7 @@ public:
 	 *
 	 * @return     A python list which consists of pairs of strings.
 	 */
-	std::vector<std::pair<std::string, std::string>> codeComplete(const char* unsavedBuffer, int row, int column) const;
+	std::vector<std::pair<std::string, std::string>> codeComplete(const char* unsavedBuffer, int row, int column);
 
 	/**
 	 * @brief      Asynchronous version of Session::codeComplete.
@@ -55,7 +50,7 @@ public:
 	 * @param[in]  column         Clang columns are 1-based, not 0-based.
 	 * @param[in]  callback       A callable python object that receives a list of string pairs.
 	 */
-	void codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback) const;
+	void codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback);
 
 
 	/**
@@ -71,6 +66,8 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
+	bool reparse();
+
 	void report(const char* message) const;
 
 private:
@@ -84,9 +81,23 @@ private:
 	void dump();
 	void codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const;
 	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
-
+	clang::CompilerInvocation* createInvocationFromOptions();
+	
+	clang::SmallVector<clang::StoredDiagnostic, 8> mStoredDiags; // ugly hack, wait for clang devs to fix this
+	clang::SmallVector<const llvm::MemoryBuffer*, 1> mOwnedBuffers; // ugly hack, wait for clang devs to fix this
+	std::shared_ptr<clang::PCHContainerOperations> mPchOps = std::make_shared<clang::PCHContainerOperations>();
 	SessionOptions mOptions;
+	clang::LangOptions mLangOpts;
+	clang::FileSystemOptions mFileOpts;
+	clang::IntrusiveRefCntPtr<clang::FileManager> mFileMgr;
+	clang::DiagnosticIDs mDiagIds;
+	clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> mDiagOpts;
 	Clara::DiagnosticConsumer mDiagConsumer;
+	clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> mDiags;
+	std::unique_ptr<Clara::CodeCompleteConsumer> mCodeCompleteConsumer;
+	std::unique_ptr<clang::ASTUnit> mUnit;
+
+	std::mutex mMethodMutex;
 };
 
 } // namespace Clara

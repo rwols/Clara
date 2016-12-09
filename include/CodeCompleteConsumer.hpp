@@ -14,7 +14,21 @@ public:
 
 	bool includeOptionalArguments = true;
 
-	CodeCompleteConsumer(const clang::CodeCompleteOptions& options, const Session& owner);
+	clang::SmallVector<clang::StoredDiagnostic, 8> Diagnostics;
+	// clang::SmallVector<CXStoredDiagnostic *, 8> DiagnosticsWrappers;
+	clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
+	clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> Diag;
+	clang::LangOptions LangOpts;
+	clang::IntrusiveRefCntPtr<clang::FileManager> FileMgr;
+	clang::IntrusiveRefCntPtr<clang::SourceManager> SourceMgr;
+	std::vector<std::string> TemporaryFiles;
+	clang::SmallVector<const llvm::MemoryBuffer *, 1> TemporaryBuffers;
+
+	CodeCompleteConsumer(const clang::CodeCompleteOptions& options, 
+		clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
+		std::string filename, int row, int column);
+
+    ~CodeCompleteConsumer() override = default;
 
 	void ProcessCodeCompleteResults(
 		clang::Sema &sema, 
@@ -38,7 +52,9 @@ public:
 
 private:
 
-	const Session& mOwner;
+	std::string mFilename;
+	int mRow;
+	int mColumn;
 
 	clang::CodeCompletionTUInfo mCCTUInfo;
 
