@@ -41,6 +41,7 @@ PYBIND11_PLUGIN(Clara)
 		.def(init<const SessionOptions&>())
 		.def("codeComplete",      &Session::codeComplete)
 		.def("codeCompleteAsync", &Session::codeCompleteAsync)
+		.def("reparse",           &Session::reparse)
 		.def("filename",          &Session::getFilename)
 	;
 

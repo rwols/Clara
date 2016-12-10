@@ -58,8 +58,6 @@ int main()
 	MyClass asdf("hello, world!");	
 	std::cout << asdf.getName() << '\n';
 
-	asdf.
-
   	return 0;    
 }
  

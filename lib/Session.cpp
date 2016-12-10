@@ -12,12 +12,10 @@ Session::Session(const SessionOptions& options)
 , mFileMgr(new clang::FileManager(mFileOpts))
 , mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
-, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
+, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), nullptr /* &mDiagConsumer*/, false))
 {
-	std::lock_guard<std::mutex> methodLock(mMethodMutex);
-	mDiags->setClient(&mDiagConsumer, false);
 	pybind11::gil_scoped_release releaser;
-
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
 	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
 	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
 		invocation.get(), 
@@ -25,29 +23,25 @@ Session::Session(const SessionOptions& options)
 		mDiags, 
 		mFileMgr.get(),
 		/*OnlyLocalDecls*/ false, 
-		/*CaptureDiagnostics*/ false, 
-		/*PrecompilePreambleAfterNParses*/ 0,
+		/*CaptureDiagnostics*/ true, 
+		/*PrecompilePreambleAfterNParses*/ 1,
 		/*TranslationUnitKind*/ clang::TU_Complete, 
-		/*CacheCodeCompletionResults*/ false,
+		/*CacheCodeCompletionResults*/ true,
 		/*IncludeBriefCommentsInCodeCompletion*/ mOptions.codeCompleteIncludeBriefComments, 
-		/*UserFilesAreVolatile*/ false);
-
-	const auto& preamble = mUnit->getPreambleData();
-	std::string message("Number of lines in the preamble of \"");
-	message.append(mOptions.filename);
-	message.append("\" is ");
-	message.append(std::to_string(preamble.getNumLines()));
-	report(message.c_str());
+		/*UserFilesAreVolatile*/ true);
 }
 
 clang::CompilerInvocation* Session::createInvocationFromOptions()
 {
 	using namespace clang;
+	CompilerInvocation* invocation = nullptr;
 	if (!mOptions.invocation.empty())
 	{
 		std::vector<const char*> commandLine;
 		for (const auto& str : mOptions.invocation) commandLine.push_back(str.c_str());
-		auto invocation = createInvocationFromCommandLine(commandLine, mDiags);
+		//IntrusiveRefCntPtr<DiagnosticsEngine> tempDiags(
+		//	new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false));
+		invocation = createInvocationFromCommandLine(commandLine, mDiags /*tempDiags*/);
 		if (invocation)
 		{
 			invocation->getFileSystemOpts().WorkingDir = mOptions.workingDirectory;
@@ -56,8 +50,11 @@ clang::CompilerInvocation* Session::createInvocationFromOptions()
 			return invocation;
 		}
 	}
-	report("Compiler invocation failed.");
-	return makeInvocation();
+	else
+	{
+		invocation = makeInvocation();
+	}
+	return invocation;
 }
 
 clang::CompilerInvocation* Session::makeInvocation() const
@@ -105,76 +102,68 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	}
 }
 
-std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
+std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
 	using namespace clang::frontend;
-	std::lock_guard<std::mutex> methodLock(mMethodMutex);
-	pybind11::gil_scoped_release releaser;
 	SmallVector<ASTUnit::RemappedFile, 1> remappedFiles;
-	llvm::MemoryBufferRef bufferAsRef(unsavedBuffer, mOptions.filename);
-	auto memBuffer = llvm::MemoryBuffer::getMemBuffer(bufferAsRef);
-	remappedFiles.push_back({mOptions.filename, memBuffer.release()});
+	auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(unsavedBuffer);
+	remappedFiles.emplace_back(mOptions.filename, memBuffer.get());
+	
+	clang::CodeCompleteOptions ccOpts;
+	ccOpts.IncludeMacros = mOptions.codeCompleteIncludeMacros ? 1 : 0;
+	ccOpts.IncludeCodePatterns = mOptions.codeCompleteIncludeCodePatterns ? 1 : 0;
+	ccOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
+	ccOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
 
-	clang::CodeCompleteOptions mCcOpts;
-	mCcOpts.IncludeMacros = mOptions.codeCompleteIncludeMacros ? 1 : 0;
-	mCcOpts.IncludeCodePatterns = mOptions.codeCompleteIncludeCodePatterns ? 1 : 0;
-	mCcOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
-	mCcOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
-	Clara::CodeCompleteConsumer consumer(mCcOpts, mFileMgr, mOptions.filename, row, column);
-	consumer.Diag->setClient(&mDiagConsumer, false);
+	Clara::CodeCompleteConsumer consumer(ccOpts, mFileMgr, mOptions.filename, row, column);
+	// consumer.Diag->setClient(&mDiagConsumer, false);
 	consumer.LangOpts = mUnit->getLangOpts();
-
 	mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
 		mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
 		mOptions.codeCompleteIncludeBriefComments, consumer,
 		mPchOps, *consumer.Diag, consumer.LangOpts, 
 		*consumer.SourceMgr, *consumer.FileMgr, consumer.Diagnostics, consumer.TemporaryBuffers);
+	std::vector<std::pair<std::string, std::string>> results;
+	consumer.moveResult(results);
+	return results;
+}
 
-	std::vector<std::pair<std::string, std::string>> result;
-	mCodeCompleteConsumer->moveResult(result);
-	return result;
+std::vector<std::pair<std::string, std::string>> Session::codeComplete(const char* unsavedBuffer, int row, int column)
+{
+	using namespace clang;
+	using namespace clang::frontend;
+	pybind11::gil_scoped_release releaser;
+	return codeCompleteImpl(unsavedBuffer, row, column);
 }
 
 void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
 	using namespace clang::frontend;
-	std::lock_guard<std::mutex> methodLock(mMethodMutex);
-    std::thread task( [this, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
+	std::thread task( [this, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
-		using namespace clang;
-		using namespace clang::frontend;
-        SmallVector<ASTUnit::RemappedFile, 1> remappedFiles;
-        auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(unsavedBuffer);
-        remappedFiles.emplace_back(mOptions.filename, memBuffer.get());
-
-		clang::CodeCompleteOptions ccOpts;
-		ccOpts.IncludeMacros = mOptions.codeCompleteIncludeMacros ? 1 : 0;
-		ccOpts.IncludeCodePatterns = mOptions.codeCompleteIncludeCodePatterns ? 1 : 0;
-		ccOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
-		ccOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
-        
-        Clara::CodeCompleteConsumer consumer(ccOpts, mFileMgr, mOptions.filename, row, column);
-        consumer.Diag->setClient(&mDiagConsumer, false);
-		mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
-			mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
-			mOptions.codeCompleteIncludeBriefComments, consumer,
-			mPchOps, *consumer.Diag, consumer.LangOpts, 
-			*consumer.SourceMgr, *consumer.FileMgr, consumer.Diagnostics, consumer.TemporaryBuffers);
-        std::vector<std::pair<std::string, std::string>> results;
-        consumer.moveResult(results);
-        try
-        {
-            pybind11::gil_scoped_acquire pythonLock;
-            callback(mOptions.filename, row, column, results);
-        }
-        catch (const std::exception& err)
-        {
-            report(err.what());
-        }
+		// We want only one thread at a time to execute this
+		std::unique_lock<std::mutex> methodLock(mMethodMutex);
+		const auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
+		methodLock.unlock(); // unlock it, we're done with mUnit
+		try
+		{
+			pybind11::gil_scoped_acquire pythonLock;
+			callback(mOptions.filename, row, column, results);
+		}
+		catch (const std::exception& err)
+		{
+			report(err.what());
+		}
 	});
 	task.detach();
+}
+
+bool Session::reparse()
+{
+	// pybind11::gil_scoped_release releaser;
+	return !mUnit->Reparse(mPchOps);
 }
 
 const std::string& Session::getFilename() const noexcept

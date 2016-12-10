@@ -26,6 +26,10 @@ struct SomeStruct
             << ", my data: " << this->data << " with extra param " << extraParamater << '\n';
         return extraParamater + data;
     }
+
+private:
+
+    float secret;
 };
 
 namespace A
@@ -78,6 +82,8 @@ int main()
     }
 
     baz(30.0f, 40.0f);
+
+    SomeStruct asdf;
 
     return 0;
 }

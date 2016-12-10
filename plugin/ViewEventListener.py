@@ -1,24 +1,21 @@
-import sublime, sublime_plugin, html, time, datetime
+import sublime, sublime_plugin, html, threading
 from .Clara import *
 from .EventListener import *
 
-def claraPrint(message):
-	t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-	print('Clara:{}: {}'.format(t, message))
+# FIXME: Replace stubs
+def verifyVersion():
+	return 3126 <= int(sublime.version())
 
 # FIXME: Replace stubs
-def verifyVersion(version):
-	return 3126 <= int(version)
-
-# FIXME: Replace stubs
-def verifyPlatform(platform):
+def verifyPlatform():
+	platform = sublime.platform()
 	return True
 
 # FIXME: Add error messages
 def plugin_loaded():
-	if not verifyVersion(sublime.version()):
+	if not verifyVersion():
 		sublime.error_message('Clara version mismatch.')
-	if not verifyPlatform(sublime.platform()):
+	if not verifyPlatform():
 		sublime.error_message('Clara platform mismatch.')
 
 class ViewEventListener(sublime_plugin.ViewEventListener):
@@ -37,22 +34,22 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def __init__(self, view):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
-		
 		self.session = None
-
 		# point -> list of tuples
 		self.point2completions = {}
-
 		# set of points (unordered) (python could use an ordered set datastructure)
 		self.inFlightCompletionAtPoint = set()
-
 		self.diagnosticPhantomSet = sublime.PhantomSet(self.view)
 		self.newPhantoms = []
 
 		if not hasCorrectExtension(self.view.file_name()):
 			return
 
-		claraPrint('Loading ' + self.view.file_name())
+		thread = threading.Thread(target=self._initSession)
+		thread.start()
+
+	def _initSession(self):
+		self.view.set_status('Clara', 'Preparsing for autocompletion, please wait...')
 		options = SessionOptions()
 		options.diagnosticCallback = self._diagnosticCallback
 		options.logCallback = claraPrint
@@ -63,35 +60,21 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		builtinHeaders = self._loadHeaders('builtin_headers')
 		options.systemHeaders = [""] if systemHeaders is None else systemHeaders
 		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
-		# if options.filename.endswith('.hpp') or options.filename.endswith('.h'):
-		# 	options.jsonCompileCommands == ""
-		# else:
-		# 	try:
-		# 		project = self.view.window().project_data()
-		# 		if project is None: raise Exception('No sublime-project found.')
-		# 		cmakeSettings = project.get('cmake')
-		# 		if cmakeSettings is None: raise Exception('No cmake settings found in sublime-project file.')
-		# 		cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
-		# 		rootFolder = cmakeSettings.get('root_folder')
-		# 		buildFolder = cmakeSettings.get('build_folder')
-		# 		options.jsonCompileCommands = "" if buildFolder is None else buildFolder
-		# 	except Exception as e:
-		# 		claraPrint(str(e))
-
 		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
-
 		compdb = EventListener.getCompilationDatabase(self.view)
 		if compdb:
 			options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
-			claraPrint(options.invocation)
-			claraPrint(options.workingDirectory)
+			claraPrint('Loading "{}" with working directory "{}" and compiler invocation {}'
+				.format(self.view.file_name(), options.workingDirectory, str(options.invocation)))
 		else:
-			claraPrint('No compilation database found for "{}"'.format(self.view.file_name()))
+			claraPrint('Loading "{}" without a compilation database.'.format(self.view.file_name()))
 
 		self.session = Session(options)
+		claraPrint('Loaded "{}"'.format(self.view.file_name()))
+		self.view.erase_status('Clara')
 
 	def _loadHeaders(self, key):
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -107,11 +90,13 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 
 	def on_query_completions(self, prefix, locations):
 		"""Find all possible completions."""
+		if not self.session:
+			return
 		point = locations[0]
-		if (self.session is None or 
-			len(locations) > 1 or 
-			not self.view.match_selector(point, 'source.c++')):
-			return None
+		if len(locations) > 1:
+			return
+		if not self.view.match_selector(point, 'source.c++'):
+			return
 		claraPrint('point = {}, prefix = {}'.format(point, prefix))
 		completions = self.point2completions.pop(point, None)
 		if completions:
@@ -129,13 +114,10 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 				claraPrint('found no completions. Calling Session::codeCompleteAsync.')
 				self.inFlightCompletionAtPoint.add(point)
 				row, col = self.view.rowcol(point)
-				unsavedBuffer = self.view.substr(sublime.Region(0, min(self.view.size(), point + 1)))
+				unsavedBuffer = self.view.substr(sublime.Region(0, self.view.size()))
 				row += 1 # clang rows are 1-based, sublime rows are 0-based
 				col += 1 # clang columns are 1-based, sublime columns are 0-based
 				self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completeCallback)
-
-	def on_post_save(self):
-		claraPrint('on_post_save: {}'.format(self.session.filename))
 
 	def _replaceSingleQuotesByBoldHtml(self, string):
 		parts = string.split("'")

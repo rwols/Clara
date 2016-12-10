@@ -1,9 +1,14 @@
-import sublime, sublime_plugin, os, time, datetime
+import sublime, sublime_plugin, os, time, datetime, threading
 from .Clara import *
 
-def ClaraPrint(message):
-	t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-	print('Clara:{}: {}'.format(t, message))
+_printLock = threading.Lock()
+
+def claraPrint(message):
+	if sublime.load_settings('Clara.sublime-settings').get('debug', False):
+		t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
+		_printLock.acquire()
+		print('Clara:{}: {}'.format(t, message))
+		_printLock.release()
 
 def hasCorrectExtension(filename):
 	return os.path.splitext(filename)[1] in ['.cpp', '.cc', '.c', '.cxx', '.objc']
@@ -20,6 +25,10 @@ class EventListener(sublime_plugin.EventListener):
 			database = cls.compilationDatabases[view.window().id()]
 			return database
 		except KeyError as keyError:
+			claraPrint('No database found.')
+			return None
+		except AttributeError as attrError:
+			claraPrint('View has no window anymore.')
 			return None
 
 	def __init__(self):
@@ -57,6 +66,6 @@ class EventListener(sublime_plugin.EventListener):
 			else:
 				compilationDatabase = CompilationDatabase(buildFolder)
 				cls.compilationDatabases[window.id()] = compilationDatabase
-				ClaraPrint('Loaded compilation database for window {}.'.format(window.id()))
+				claraPrint('Loaded compilation database for window {}.'.format(window.id()))
 		except Exception as e:
-			ClaraPrint('Window {}: {}'.format(window.id(), str(e)))
+			claraPrint('Window {}: {}'.format(window.id(), str(e)))

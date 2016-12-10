@@ -79,6 +79,7 @@ private:
 	void loadFromOptions(clang::CompilerInstance& instance) const;
 	clang::CompilerInvocation* makeInvocation() const;
 	void dump();
+	std::vector<std::pair<std::string, std::string>> codeCompleteImpl(const char*, int, int);
 	void codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const;
 	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
 	clang::CompilerInvocation* createInvocationFromOptions();
