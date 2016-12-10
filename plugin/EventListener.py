@@ -2,13 +2,25 @@ import sublime, sublime_plugin, os, time, datetime, threading
 from .Clara import *
 
 _printLock = threading.Lock()
+_pluginLoaded = False
+
+def plugin_loaded():
+	global _pluginLoaded
+	_pluginLoaded = True
+	claraPrint('EventListener loaded.')
+
+def _claraPrintImpl(message):
+	t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
+	_printLock.acquire()
+	print('Clara:{}: {}'.format(t, message))
+	_printLock.release()
 
 def claraPrint(message):
-	if sublime.load_settings('Clara.sublime-settings').get('debug', False):
-		t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-		_printLock.acquire()
-		print('Clara:{}: {}'.format(t, message))
-		_printLock.release()
+	if _pluginLoaded:
+		if sublime.load_settings('Clara.sublime-settings').get('debug', False):
+			_claraPrintImpl(message)
+	else:
+		_claraPrintImpl('(warning: premature access to sublime API) {}'.format(message))
 
 def hasCorrectExtension(filename):
 	return os.path.splitext(filename)[1] in ['.cpp', '.cc', '.c', '.cxx', '.objc']
@@ -34,10 +46,17 @@ class EventListener(sublime_plugin.EventListener):
 	def __init__(self):
 		super(EventListener, self).__init__()
 
-	def on_load_async(self, view):
+	def on_load(self, view):
+		# We don't want this to be an async method, because
+		# if it is, it can happen that loading the compilation
+		# database is not finished before a view requests a
+		# compilation database, in which case the view thinks
+		# there is no comp db, and then we're stuck with crappy
+		# auto-completion. The same holds for the below method
+		# on_activated.
 		EventListener._ensureExistenceOfCompilationDatabase(view)
 
-	def on_activated_async(self, view):
+	def on_activated(self, view):
 		EventListener._ensureExistenceOfCompilationDatabase(view)
 
 	@classmethod
@@ -58,14 +77,14 @@ class EventListener(sublime_plugin.EventListener):
 			project = window.project_data()
 			if project is None: raise Exception('No sublime-project found for window {}.'.format(window.id()))
 			cmakeSettings = project.get('cmake')
-			if cmakeSettings is None: raise Exception('No cmake settings found in sublime-project file of window {}.'.format(window.id()))
+			if cmakeSettings is None: raise Exception('No cmake settings found for "{}".'.format(window.project_file_name()))
 			cmakeSettings = sublime.expand_variables(cmakeSettings, window.extract_variables())
 			buildFolder = cmakeSettings.get('build_folder')
 			if buildFolder is None:
-				raise KeyError('No "build_folder" key present in "cmake" settings of window {}.'.format(window.id()))
+				raise KeyError('No "build_folder" key present in "cmake" settings of  "{}".'.format(window.project_file_name()))
 			else:
 				compilationDatabase = CompilationDatabase(buildFolder)
 				cls.compilationDatabases[window.id()] = compilationDatabase
-				claraPrint('Loaded compilation database for window {}.'.format(window.id()))
+				claraPrint('Loaded compilation database for window {}, located in "{}"'.format(window.id(), buildFolder))
 		except Exception as e:
 			claraPrint('Window {}: {}'.format(window.id(), str(e)))

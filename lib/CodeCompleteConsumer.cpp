@@ -1,21 +1,21 @@
-#include "CodeCompleteConsumer.hpp"
+#include "../include/CodeCompleteConsumer.hpp"
 #include "PyBind11.hpp"
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
 
 namespace Clara {
 
-CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options, 
-	clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
-	std::string filename, int row, int column)
+CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options) 
+	// clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
+	// std::string filename, int row, int column)
 : clang::CodeCompleteConsumer(options, false)
-, DiagOpts(new clang::DiagnosticOptions)
-, Diag(new clang::DiagnosticsEngine(clang::IntrusiveRefCntPtr<clang::DiagnosticIDs>(new clang::DiagnosticIDs), &*DiagOpts))
-, FileMgr(fileManager)
-, SourceMgr(new clang::SourceManager(*Diag, *FileMgr))
-, mFilename(std::move(filename))
-, mRow(row)
-, mColumn(column)
+// , DiagOpts(new clang::DiagnosticOptions)
+// , Diag(new clang::DiagnosticsEngine(clang::IntrusiveRefCntPtr<clang::DiagnosticIDs>(new clang::DiagnosticIDs), &*DiagOpts))
+// , FileMgr(fileManager)
+// , SourceMgr(new clang::SourceManager(*Diag, *FileMgr))
+// , mFilename(std::move(filename))
+// , mRow(row)
+// , mColumn(column)
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
 	/* empty */

@@ -13,6 +13,7 @@ def verifyPlatform():
 
 # FIXME: Add error messages
 def plugin_loaded():
+	claraPrint('ViewEventListener loaded.')
 	if not verifyVersion():
 		sublime.error_message('Clara version mismatch.')
 	if not verifyPlatform():
@@ -35,6 +36,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		"""Initializes this ViewEventListener."""
 		super(ViewEventListener, self).__init__(view)
 		self.session = None
+		self.sessionIsLoading = False
 		# point -> list of tuples
 		self.point2completions = {}
 		# set of points (unordered) (python could use an ordered set datastructure)
@@ -42,13 +44,18 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		self.diagnosticPhantomSet = sublime.PhantomSet(self.view)
 		self.newPhantoms = []
 
+	def _initSession(self):
+		if self.sessionIsLoading:
+			# Already loading a session in a thread somewhere.
+			return
+		self.sessionIsLoading = True
 		if not hasCorrectExtension(self.view.file_name()):
 			return
+		compdb = EventListener.getCompilationDatabase(self.view)
+		if not compdb:
+			# Not even going to try.
+			return
 
-		thread = threading.Thread(target=self._initSession)
-		thread.start()
-
-	def _initSession(self):
 		self.view.set_status('Clara', 'Preparsing for autocompletion, please wait...')
 		options = SessionOptions()
 		options.diagnosticCallback = self._diagnosticCallback
@@ -65,12 +72,9 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
 		compdb = EventListener.getCompilationDatabase(self.view)
-		if compdb:
-			options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
-			claraPrint('Loading "{}" with working directory "{}" and compiler invocation {}'
-				.format(self.view.file_name(), options.workingDirectory, str(options.invocation)))
-		else:
-			claraPrint('Loading "{}" without a compilation database.'.format(self.view.file_name()))
+		options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
+		claraPrint('Loading "{}" with working directory "{}" and compiler invocation {}'
+			.format(self.view.file_name(), options.workingDirectory, str(options.invocation)))
 
 		self.session = Session(options)
 		claraPrint('Loaded "{}"'.format(self.view.file_name()))
@@ -87,6 +91,22 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		else:
 			sublime.error_message('Clara will not work without setting up headers!')
 			return None
+
+	def on_activated(self):
+		# We're not using on_activated_async because it seems
+		# to restrict itself to a single background thread.
+		# Some implementation files may take a long time to parse,
+		# and if the user has already clicked a new view the on_activated_async
+		# method of that view will wait for the previous one to finish. We
+		# don't need that synchronization, so we spawn a thread for each new
+		# view.
+		if self.session or self.sessionIsLoading:
+			return
+		else:
+			threading.Thread(target=self._initSession).start()
+
+	#def on_activated_async(self):
+	#	self._initSession()
 
 	def on_query_completions(self, prefix, locations):
 		"""Find all possible completions."""
@@ -145,9 +165,8 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 			return
 		elif level == 'finish':
 			claraPrint('END DIAGNOSIS'.format(filename))
-			assert isinstance(self.newPhantoms, list)
-			self.diagnosticPhantomSet.update(self.newPhantoms)
 			self.newPhantoms = []
+			self.diagnosticPhantomSet.update(self.newPhantoms)
 			return
 		elif level == 'warning':
 			claraPrint('{}, warning, {}, {}, {}'.format(filename, row, column, message))
@@ -174,6 +193,7 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		message = '<body id="ClaraDiagnostic"><div class="{}"><i>{}</i></div></body>'.format(divclass, message)
 		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
 		self.newPhantoms.append(phantom)
+		self.diagnosticPhantomSet.update(self.newPhantoms)
 
 	def _completeCallback(self, filename, row, col, completions):
 		row -= 1 # Clang rows are 1-based, sublime rows are 0-based.

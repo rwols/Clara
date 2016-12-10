@@ -81,7 +81,7 @@ int main()
             break;
     }
 
-    baz(30.0f, 40.0f);
+    baz(30.0f, 40f);
 
     SomeStruct asdf;
 

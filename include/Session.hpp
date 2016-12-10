@@ -82,6 +82,7 @@ private:
 	std::vector<std::pair<std::string, std::string>> codeCompleteImpl(const char*, int, int);
 	void codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const;
 	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;
+	clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> createDiagnosticsEngine() const;
 	clang::CompilerInvocation* createInvocationFromOptions();
 	
 	clang::SmallVector<clang::StoredDiagnostic, 8> mStoredDiags; // ugly hack, wait for clang devs to fix this
@@ -95,6 +96,7 @@ private:
 	clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> mDiagOpts;
 	Clara::DiagnosticConsumer mDiagConsumer;
 	clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> mDiags;
+	clang::IntrusiveRefCntPtr<clang::SourceManager> mSourceMgr;
 	std::unique_ptr<Clara::CodeCompleteConsumer> mCodeCompleteConsumer;
 	std::unique_ptr<clang::ASTUnit> mUnit;
 

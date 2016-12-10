@@ -1,4 +1,4 @@
-#include "Session.hpp"
+#include "../include/Session.hpp"
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
@@ -12,8 +12,10 @@ Session::Session(const SessionOptions& options)
 , mFileMgr(new clang::FileManager(mFileOpts))
 , mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
-, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), nullptr /* &mDiagConsumer*/, false))
+, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
+, mSourceMgr(new clang::SourceManager(*mDiags, *mFileMgr))
 {
+	assert(mSourceMgr == &mDiags->getSourceManager() && "Expected these to be the same...");
 	pybind11::gil_scoped_release releaser;
 	std::lock_guard<std::mutex> methodLock(mMethodMutex);
 	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
@@ -23,7 +25,7 @@ Session::Session(const SessionOptions& options)
 		mDiags, 
 		mFileMgr.get(),
 		/*OnlyLocalDecls*/ false, 
-		/*CaptureDiagnostics*/ true, 
+		/*CaptureDiagnostics*/ false,
 		/*PrecompilePreambleAfterNParses*/ 1,
 		/*TranslationUnitKind*/ clang::TU_Complete, 
 		/*CacheCodeCompletionResults*/ true,
@@ -39,9 +41,7 @@ clang::CompilerInvocation* Session::createInvocationFromOptions()
 	{
 		std::vector<const char*> commandLine;
 		for (const auto& str : mOptions.invocation) commandLine.push_back(str.c_str());
-		//IntrusiveRefCntPtr<DiagnosticsEngine> tempDiags(
-		//	new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false));
-		invocation = createInvocationFromCommandLine(commandLine, mDiags /*tempDiags*/);
+		invocation = createInvocationFromCommandLine(commandLine, mDiags);
 		if (invocation)
 		{
 			invocation->getFileSystemOpts().WorkingDir = mOptions.workingDirectory;
@@ -102,6 +102,14 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	}
 }
 
+// clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> Session::createDiagnosticsEngine() const
+// {
+// 	using namespace clang;
+// 	IntrusiveRefCntPtr<DiagnosticOptions> diagOpts(new DiagnosticOptions());
+// 	IntrusiveRefCntPtr<DiagnosticsEngine> diagEngine()
+// 	mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
+// }
+
 std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const char* unsavedBuffer, int row, int column)
 {
 	using namespace clang;
@@ -116,14 +124,16 @@ std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const
 	ccOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
 	ccOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
 
-	Clara::CodeCompleteConsumer consumer(ccOpts, mFileMgr, mOptions.filename, row, column);
-	// consumer.Diag->setClient(&mDiagConsumer, false);
-	consumer.LangOpts = mUnit->getLangOpts();
+	Clara::CodeCompleteConsumer consumer(ccOpts/*, mFileMgr, mOptions.filename, row, column*/);
+	LangOptions langOpts = mUnit->getLangOpts();
+	// IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
+	// SmallVector<StoredDiagnostic, 8> diagnostics;
+	// SmallVector<const llvm::MemoryBuffer *, 1> temporaryBuffers;
 	mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
 		mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
 		mOptions.codeCompleteIncludeBriefComments, consumer,
-		mPchOps, *consumer.Diag, consumer.LangOpts, 
-		*consumer.SourceMgr, *consumer.FileMgr, consumer.Diagnostics, consumer.TemporaryBuffers);
+		mPchOps, *mDiags, langOpts, 
+		mDiags->getSourceManager(), *mFileMgr, mStoredDiags, mOwnedBuffers);
 	std::vector<std::pair<std::string, std::string>> results;
 	consumer.moveResult(results);
 	return results;
