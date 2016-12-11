@@ -17,6 +17,7 @@ struct SessionOptions
 	pybind11::object diagnosticCallback;
 	std::string filename;
 	std::vector<std::string> systemHeaders;
+	std::vector<std::string> frameworks;
 	std::string builtinHeaders;
 	std::string jsonCompileCommands;
 	std::string workingDirectory;

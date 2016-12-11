@@ -1,2 +1,4 @@
 add_executable(clangapitest clangapitest.cpp)
+add_executable(astunitcrash astunitcrash.cpp)
 target_link_libraries(clangapitest clangFrontend)
+target_link_libraries(astunitcrash clangFrontend)

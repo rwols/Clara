@@ -6,7 +6,7 @@
 namespace Clara {
 
 DiagnosticConsumer::DiagnosticConsumer(pybind11::object callback)
-: mCallback(callback)
+: mCallback(std::move(callback))
 {
 
 }
@@ -15,9 +15,7 @@ void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, cons
 {
 	clang::DiagnosticConsumer::BeginSourceFile(options, pp);
 	mSourceMgr = pp == nullptr ? nullptr : &(pp->getSourceManager());
-	pybind11::gil_scoped_acquire pythonLock;
-	if (mCallback == pybind11::object()) return;
-	else mCallback(std::string(), "begin", -1, -1, std::string());
+	doCallback("", "begin", -1, -1, "");
 }
 
 void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level, const clang::Diagnostic& info)
@@ -51,9 +49,7 @@ void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
 void DiagnosticConsumer::finish()
 {
 	clang::DiagnosticConsumer::finish();
-	pybind11::gil_scoped_acquire pythonLock;
-	if (mCallback == pybind11::object()) return;
-	else mCallback(std::string(), "finish", -1, -1, std::string());
+	doCallback("", "finish", -1, -1, "");
 }
 
 clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& info) const
@@ -70,15 +66,29 @@ clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& 
 
 void DiagnosticConsumer::doCallback(const char* messageType, const clang::PresumedLoc& presumedLoc, const char* message)
 {
-	pybind11::gil_scoped_acquire pythonLock;
-	if (mCallback == pybind11::object()) return;
 	if (presumedLoc.isValid())
 	{
-		mCallback(presumedLoc.getFilename(), messageType, presumedLoc.getLine(), presumedLoc.getColumn(), message);
+		doCallback(presumedLoc.getFilename(), messageType, presumedLoc.getLine(), presumedLoc.getColumn(), message);
 	}
 	else
 	{
-		mCallback(std::string(), messageType, -1, -1, message);
+		doCallback("", messageType, -1, -1, message);
+	}
+}
+
+void DiagnosticConsumer::doCallback(const char* filename, const char* messageType, int row, int column, const char* message)
+{
+	pybind11::gil_scoped_acquire pythonLock;
+	if (mCallback != pybind11::object())
+	{
+		try
+		{
+			mCallback(filename, messageType, row, column, message);
+		}
+		catch (const std::exception& err)
+		{
+			// oops... now what?
+		}
 	}
 }
 

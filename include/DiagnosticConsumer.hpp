@@ -18,6 +18,7 @@ private:
 	clang::SourceManager* mSourceMgr = nullptr;
 	clang::PresumedLoc makePresumedLoc(const clang::Diagnostic& info) const;
 	void doCallback(const char* messageType, const clang::PresumedLoc& presumedLoc, const char* message);
+	void doCallback(const char* filename, const char* messageType, int row, int column, const char* message);
 };
 
 } // namespace Clara

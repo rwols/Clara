@@ -2,6 +2,8 @@ import sublime, sublime_plugin, html, threading
 from .Clara import *
 from .EventListener import *
 
+_hasLoadedHeadersAtleastOnce = False
+
 # FIXME: Replace stubs
 def verifyVersion():
 	return 3126 <= int(sublime.version())
@@ -48,33 +50,53 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		if self.sessionIsLoading:
 			# Already loading a session in a thread somewhere.
 			return
+
+		# This boolean variable will stay true forever. It's a useful check
+		# to see if we *tried* to load a session (but perhaps failed). If we
+		# failed once, we're just not gonna try again anymore.
 		self.sessionIsLoading = True
+
 		if not hasCorrectExtension(self.view.file_name()):
+			# The file doesn't have the correct extension, so forget about it.
 			return
 		compdb = EventListener.getCompilationDatabase(self.view)
 		if not compdb:
 			# Not even going to try.
 			return
 
-		self.view.set_status('Clara', 'Preparsing for autocompletion, please wait...')
+		# Start building the SessionOptions object, to build a Session object.
 		options = SessionOptions()
+		options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
+		if not options.invocation:
+			# This file is not in the compilation database, so forget about it.
+			claraPrint('The file "{}" is not in the compilation database, so we are not doing code-completion.'
+				.format(self.view.file_name()))
+			return
+
+		# Load in the system headers and builtin headers.
+		systemHeaders = self._loadHeaders('system_headers')
+		builtinHeaders = self._loadHeaders('builtin_headers')
+		frameworks = self._loadHeaders('system_frameworks')
+		options.systemHeaders = [""] if systemHeaders is None else systemHeaders
+		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
+		options.frameworks = '' if frameworks is None else frameworks
+
+		# At this point we can't really fail, so set the view's status to
+		# something informative to let the user know that we are parsing.
+		self.view.set_status('Clara', 'Parsing file for auto-completion, puny humans should wait')
+		claraPrint('Loading "{}" with working directory "{}" and compiler invocation {}'
+			.format(self.view.file_name(), options.workingDirectory, str(options.invocation)))
+
 		options.diagnosticCallback = self._diagnosticCallback
 		options.logCallback = claraPrint
 		options.codeCompleteCallback = self._completeCallback
 		settings = sublime.load_settings('Clara.sublime-settings')
 		options.filename = self.view.file_name()
-		systemHeaders = self._loadHeaders('system_headers')
-		builtinHeaders = self._loadHeaders('builtin_headers')
-		options.systemHeaders = [""] if systemHeaders is None else systemHeaders
-		options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
+
 		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
 		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
-		compdb = EventListener.getCompilationDatabase(self.view)
-		options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
-		claraPrint('Loading "{}" with working directory "{}" and compiler invocation {}'
-			.format(self.view.file_name(), options.workingDirectory, str(options.invocation)))
 
 		self.session = Session(options)
 		claraPrint('Loaded "{}"'.format(self.view.file_name()))
@@ -83,13 +105,18 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 	def _loadHeaders(self, key):
 		settings = sublime.load_settings('Clara.sublime-settings')
 		headers = settings.get(key)
+		global _hasLoadedHeadersAtleastOnce
 		if headers is not None:
 			return headers
-		elif sublime.ok_cancel_dialog('You do not yet have headers set up. Do you want to generate them now?'):
-			sublime.run_command('generate_system_headers')
-			return settings.get(key)
+		elif not _hasLoadedHeadersAtleastOnce:
+			_hasLoadedHeadersAtleastOnce = True
+			if sublime.ok_cancel_dialog('You do not yet have headers set up. Do you want to generate them now?'):
+				sublime.run_command('generate_system_headers')
+				return settings.get(key)
+			else:
+				sublime.error_message('Clara will not work properly without setting up headers!')
+				return None
 		else:
-			sublime.error_message('Clara will not work without setting up headers!')
 			return None
 
 	def on_activated(self):
@@ -187,6 +214,9 @@ class ViewEventListener(sublime_plugin.ViewEventListener):
 		if row != -1 or column != -1:
 			row -= 1
 			column -= -1
+			# The reason is not clear, but Clang somehow puts error too much to the right
+			# (two character points to be precise), so we subtract that here again to
+			# make the phantoms line up at the exact error.
 			point = max(0, self.view.text_point(row, column) - 2)
 		region = sublime.Region(point, point)
 		message = self._replaceSingleQuotesByBoldHtml(message)

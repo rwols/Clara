@@ -9,15 +9,54 @@ using namespace Clara;
 
 Session::Session(const SessionOptions& options)
 : mOptions(options)
-, mFileMgr(new clang::FileManager(mFileOpts))
+//, mFileMgr(new clang::FileManager(mFileOpts))
 , mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
 , mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
-, mSourceMgr(new clang::SourceManager(*mDiags, *mFileMgr))
+//, mSourceMgr(new clang::SourceManager(*mDiags, *mFileMgr))
 {
-	assert(mSourceMgr == &mDiags->getSourceManager() && "Expected these to be the same...");
-	pybind11::gil_scoped_release releaser;
+	using namespace clang;
 	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+	pybind11::gil_scoped_release releaser;
+	mFileOpts.WorkingDir = mOptions.workingDirectory;
+	mFileMgr = new FileManager(mFileOpts);
+	// resetDiagnosticsEngine();
+	// assert(mSourceMgr == &mDiags->getSourceManager() && "Expected these to be the same...");
+	
+	// std::vector<const char*> cstrings;
+	// cstrings.reserve(mOptions.invocation.size() + 2 * mOptions.systemHeaders.size() + 2);
+	// for (const auto& arg : mOptions.invocation)
+	// {
+	// 	cstrings.push_back(arg.c_str());
+	// }
+	// for (const auto& systemHeader : mOptions.systemHeaders)
+	// {
+	// 	cstrings.push_back("-isystem");
+	// 	cstrings.push_back(systemHeader.c_str());
+	// }
+	// cstrings.push_back("-isysroot");
+	// cstrings.push_back(mOptions.workingDirectory.c_str());
+
+	// mUnit.reset(ASTUnit::LoadFromCommandLine
+	// (
+	// 	&cstrings[0], // Arg begin
+	// 	&cstrings[0] + cstrings.size(), // Arg end
+	// 	mPchOps, // PCH Container Operations
+	// 	mDiags, // Intrusive refcount pointer to DiagnosticsEngine
+	// 	mOptions.builtinHeaders, // ResourceFilesPath
+	// 	false, // Only local declarations
+	// 	false, // Capture diagnostics
+	// 	None, // Remapped Files
+	// 	true, // Remapped files keep original name
+	// 	0, // Precompile preamble after n parses
+	// 	TU_Complete, // TranslationUnitKind
+	// 	true, // Cache code completion results
+	// 	mOptions.codeCompleteIncludeBriefComments, // Include brief comments in code completion 
+	// 	false, // Allow PCH with compiler errors
+	// 	false, // Skip function bodies
+	// 	false // User files are volatile
+	// ));
+	
 	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
 	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
 		invocation.get(), 
@@ -45,7 +84,7 @@ clang::CompilerInvocation* Session::createInvocationFromOptions()
 		if (invocation)
 		{
 			invocation->getFileSystemOpts().WorkingDir = mOptions.workingDirectory;
-			mFileOpts.WorkingDir = mOptions.workingDirectory;
+			// mFileOpts.WorkingDir = mOptions.workingDirectory;
 			fillInvocationWithStandardHeaderPaths(invocation);
 			return invocation;
 		}
@@ -100,15 +139,20 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	{
 		headerSearchOpts.AddPath(systemHeader, clang::frontend::System, false, false);
 	}
+	for (const auto& framework : mOptions.frameworks)
+	{
+		headerSearchOpts.AddPath(framework, clang::frontend::System, true, false);
+	}
 }
 
-// clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> Session::createDiagnosticsEngine() const
-// {
-// 	using namespace clang;
-// 	IntrusiveRefCntPtr<DiagnosticOptions> diagOpts(new DiagnosticOptions());
-// 	IntrusiveRefCntPtr<DiagnosticsEngine> diagEngine()
-// 	mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
-// }
+void Session::resetDiagnosticsEngine()
+{
+	// IntrusiveRefCntPtr takes care of deleting things
+	using namespace clang;
+	mDiagOpts = new DiagnosticOptions();
+	mDiags = new DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false);
+	mSourceMgr = new SourceManager(*mDiags, *mFileMgr);
+}
 
 std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const char* unsavedBuffer, int row, int column)
 {
@@ -129,11 +173,15 @@ std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const
 	// IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
 	// SmallVector<StoredDiagnostic, 8> diagnostics;
 	// SmallVector<const llvm::MemoryBuffer *, 1> temporaryBuffers;
+	// resetDiagnosticsEngine();
+	mDiags->Reset();
+	mStoredDiags.clear();
+	IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
 	mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
 		mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
 		mOptions.codeCompleteIncludeBriefComments, consumer,
 		mPchOps, *mDiags, langOpts, 
-		mDiags->getSourceManager(), *mFileMgr, mStoredDiags, mOwnedBuffers);
+		*sourceManager, *mFileMgr, mStoredDiags, mOwnedBuffers);
 	std::vector<std::pair<std::string, std::string>> results;
 	consumer.moveResult(results);
 	return results;

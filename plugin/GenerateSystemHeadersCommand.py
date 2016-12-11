@@ -12,17 +12,25 @@ class GenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 
 		output = subprocess.check_output(SHELL_CMD1, shell=True)
 		output = output.decode('utf-8')
-		headers = output.splitlines()
-		for i, header in enumerate(headers):
-			header = header.strip()
-			if header.endswith(' (framework directory)'):
-				header = header[:-len(' (framework directory)')]
-			headers[i] = os.path.abspath(header)
+		rawHeaders = output.splitlines()
+		frameworks = []
+		headers = []
+		for rawHeader in rawHeaders:
+			rawHeader = rawHeader.strip()
+			if rawHeader.endswith(' (framework directory)'):
+				rawHeader = rawHeader[:-len(' (framework directory)')]
+				frameworks.append(os.path.abspath(rawHeader))
+			else:
+				headers.append(os.path.abspath(rawHeader))
 		output = subprocess.check_output(SHELL_CMD2, shell=True)
 		builtinHeaders = os.path.abspath(output.decode('utf-8').strip())
+		builtinIncludes = os.path.join(builtinHeaders, 'include')
+		print(builtinIncludes)
+		if builtinIncludes in headers: headers.remove(builtinIncludes)
 		settings = sublime.load_settings(SETTINGS)
-		settings.set('system_headers', headers)
 		settings.set('builtin_headers', builtinHeaders)
+		settings.set('system_headers', headers)
+		settings.set('system_frameworks', frameworks)
 		sublime.save_settings(SETTINGS)
 		if sublime.ok_cancel_dialog(USER_MSG):
 			sublime.run_command('open_clara_settings')
