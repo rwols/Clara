@@ -45,12 +45,13 @@ public:
 	/**
 	 * @brief      Asynchronous version of Session::codeComplete.
 	 *
+	 * @param[in]  viewID         The view ID associated to the Sublime View
 	 * @param[in]  unsavedBuffer  The buffer that is not yet saved to disk.
 	 * @param[in]  row            Clang rows are 1-based, not 0-based.
 	 * @param[in]  column         Clang columns are 1-based, not 0-based.
 	 * @param[in]  callback       A callable python object that receives a list of string pairs.
 	 */
-	void codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback);
+	void codeCompleteAsync(const int viewID, std::string unsavedBuffer, int row, int column, pybind11::object callback);
 
 
 	/**
@@ -66,7 +67,7 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
-	bool reparse();
+	void reparse(const int viewID, pybind11::object reparseCallback);
 
 	void report(const char* message) const;
 

@@ -53,5 +53,6 @@ int main()
 		/*RemappedFiles=*/None, /*RemappedFilesKeepOriginalName=*/true,
 		/*PrecompilePreambleAfterNParses=*/precompilePreamble);
 	#pragma clang diagnostic pop
+
 	return 0;
 }

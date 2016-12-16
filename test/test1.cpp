@@ -19,9 +19,7 @@ int main()
     World world;
     world.data = 5;
 
-    world.add(6, 10);
-
-    ASDF asdf;
+    world.data = 3;
 
     return 0;
 }

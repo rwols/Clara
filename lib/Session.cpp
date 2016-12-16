@@ -65,11 +65,15 @@ Session::Session(const SessionOptions& options)
 		mFileMgr.get(),
 		/*OnlyLocalDecls*/ false, 
 		/*CaptureDiagnostics*/ false,
-		/*PrecompilePreambleAfterNParses*/ 1,
+		/*PrecompilePreambleAfterNParses*/ 2,
 		/*TranslationUnitKind*/ clang::TU_Complete, 
 		/*CacheCodeCompletionResults*/ true,
 		/*IncludeBriefCommentsInCodeCompletion*/ mOptions.codeCompleteIncludeBriefComments, 
 		/*UserFilesAreVolatile*/ true);
+	if (mUnit->Reparse(mPchOps))
+	{
+		throw std::runtime_error("Failed to parse AST!");
+	}
 }
 
 clang::CompilerInvocation* Session::createInvocationFromOptions()
@@ -123,6 +127,7 @@ clang::CompilerInvocation* Session::makeInvocation() const
 void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const
 {
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
+	invocation->getFrontendOpts().SkipFunctionBodies = 1;
 
 	#ifdef PRINT_HEADER_SEARCH_PATHS
 		headerSearchOpts.Verbose = true;
@@ -133,7 +138,10 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	headerSearchOpts.UseBuiltinIncludes = true;
 	headerSearchOpts.UseStandardSystemIncludes = true;
 	headerSearchOpts.UseStandardCXXIncludes = true;
-	headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
+
+	// The resourcedir is hardcoded into the library now...
+	// Don't see any other way on how to solve this.
+	// headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
 
 	for (const auto& systemHeader : mOptions.systemHeaders)
 	{
@@ -195,11 +203,11 @@ std::vector<std::pair<std::string, std::string>> Session::codeComplete(const cha
 	return codeCompleteImpl(unsavedBuffer, row, column);
 }
 
-void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, pybind11::object callback)
+void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int row, int column, pybind11::object callback)
 {
 	using namespace clang;
 	using namespace clang::frontend;
-	std::thread task( [this, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
+	std::thread task( [this, viewID, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
 		// We want only one thread at a time to execute this
 		std::unique_lock<std::mutex> methodLock(mMethodMutex);
@@ -208,7 +216,7 @@ void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, 
 		try
 		{
 			pybind11::gil_scoped_acquire pythonLock;
-			callback(mOptions.filename, row, column, results);
+			callback(viewID, row, column, results);
 		}
 		catch (const std::exception& err)
 		{
@@ -218,10 +226,13 @@ void Session::codeCompleteAsync(std::string unsavedBuffer, int row, int column, 
 	task.detach();
 }
 
-bool Session::reparse()
+void Session::reparse(const int viewID, pybind11::object reparseCallback)
 {
-	// pybind11::gil_scoped_release releaser;
-	return !mUnit->Reparse(mPchOps);
+	pybind11::gil_scoped_release releaser;
+	bool success = !mUnit->Reparse(mPchOps);
+	pybind11::gil_scoped_acquire pythonLock;
+	if (reparseCallback == pybind11::object()) return;
+	else reparseCallback(viewID, success);
 }
 
 const std::string& Session::getFilename() const noexcept

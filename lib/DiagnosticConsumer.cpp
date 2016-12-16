@@ -8,7 +8,7 @@ namespace Clara {
 DiagnosticConsumer::DiagnosticConsumer(pybind11::object callback)
 : mCallback(std::move(callback))
 {
-
+	
 }
 
 void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, const clang::Preprocessor* pp)

@@ -83,5 +83,7 @@ int main()
 
     baz(30.0f, 40.0f);
 
+    baz(30.0f, 40.0f);
+
     return 0;
 }
