@@ -9,54 +9,35 @@ using namespace Clara;
 
 Session::Session(const SessionOptions& options)
 : mOptions(options)
-//, mFileMgr(new clang::FileManager(mFileOpts))
 , mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
 , mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
-//, mSourceMgr(new clang::SourceManager(*mDiags, *mFileMgr))
 {
 	using namespace clang;
 	std::lock_guard<std::mutex> methodLock(mMethodMutex);
 	pybind11::gil_scoped_release releaser;
 	mFileOpts.WorkingDir = mOptions.workingDirectory;
 	mFileMgr = new FileManager(mFileOpts);
-	// resetDiagnosticsEngine();
-	// assert(mSourceMgr == &mDiags->getSourceManager() && "Expected these to be the same...");
-	
-	// std::vector<const char*> cstrings;
-	// cstrings.reserve(mOptions.invocation.size() + 2 * mOptions.systemHeaders.size() + 2);
-	// for (const auto& arg : mOptions.invocation)
-	// {
-	// 	cstrings.push_back(arg.c_str());
-	// }
-	// for (const auto& systemHeader : mOptions.systemHeaders)
-	// {
-	// 	cstrings.push_back("-isystem");
-	// 	cstrings.push_back(systemHeader.c_str());
-	// }
-	// cstrings.push_back("-isysroot");
-	// cstrings.push_back(mOptions.workingDirectory.c_str());
 
-	// mUnit.reset(ASTUnit::LoadFromCommandLine
-	// (
-	// 	&cstrings[0], // Arg begin
-	// 	&cstrings[0] + cstrings.size(), // Arg end
-	// 	mPchOps, // PCH Container Operations
-	// 	mDiags, // Intrusive refcount pointer to DiagnosticsEngine
-	// 	mOptions.builtinHeaders, // ResourceFilesPath
-	// 	false, // Only local declarations
-	// 	false, // Capture diagnostics
-	// 	None, // Remapped Files
-	// 	true, // Remapped files keep original name
-	// 	0, // Precompile preamble after n parses
-	// 	TU_Complete, // TranslationUnitKind
-	// 	true, // Cache code completion results
-	// 	mOptions.codeCompleteIncludeBriefComments, // Include brief comments in code completion 
-	// 	false, // Allow PCH with compiler errors
-	// 	false, // Skip function bodies
-	// 	false // User files are volatile
-	// ));
-	
+	llvm::sys::fs::file_status astStatus, fileStatus;
+	llvm::sys::fs::status(mOptions.filename, fileStatus);
+	llvm::sys::fs::status(mOptions.astFile, astStatus);
+	if (llvm::sys::fs::exists(astStatus))
+	{
+		if (astStatus.getLastModificationTime() >= fileStatus.getLastModificationTime())
+		{
+			std::string message("Reading \"");
+			message.append(mOptions.astFile);
+			message.append("\".");
+			report(message.c_str());
+			mUnit = clang::ASTUnit::LoadFromASTFile(
+				mOptions.astFile, mPchOps->getRawReader(), mDiags, 
+				mFileOpts, true, false, llvm::None, false, true, true);
+		}
+	}
+
+	if (mUnit) return;
+
 	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
 	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
 		invocation.get(), 
@@ -176,12 +157,10 @@ std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const
 	ccOpts.IncludeGlobals = mOptions.codeCompleteIncludeGlobals ? 1 : 0;
 	ccOpts.IncludeBriefComments = mOptions.codeCompleteIncludeBriefComments ? 1 : 0;
 
-	Clara::CodeCompleteConsumer consumer(ccOpts/*, mFileMgr, mOptions.filename, row, column*/);
+	Clara::CodeCompleteConsumer consumer(ccOpts);
+	consumer.includeOptionalArguments = mOptions.codeCompleteIncludeOptionalArguments;
 	LangOptions langOpts = mUnit->getLangOpts();
-	// IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
-	// SmallVector<StoredDiagnostic, 8> diagnostics;
-	// SmallVector<const llvm::MemoryBuffer *, 1> temporaryBuffers;
-	// resetDiagnosticsEngine();
+
 	mDiags->Reset();
 	mStoredDiags.clear();
 	IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
@@ -233,6 +212,11 @@ void Session::reparse(const int viewID, pybind11::object reparseCallback)
 	pybind11::gil_scoped_acquire pythonLock;
 	if (reparseCallback == pybind11::object()) return;
 	else reparseCallback(viewID, success);
+}
+
+void Session::save() const
+{
+	mUnit->Save(mOptions.astFile);
 }
 
 const std::string& Session::getFilename() const noexcept

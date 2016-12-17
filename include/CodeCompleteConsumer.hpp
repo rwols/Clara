@@ -14,16 +14,6 @@ public:
 
 	bool includeOptionalArguments = true;
 
-	// clang::SmallVector<clang::StoredDiagnostic, 8> Diagnostics;
-	// clang::SmallVector<CXStoredDiagnostic *, 8> DiagnosticsWrappers;
-	// clang::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
-	// clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> Diag;
-	// clang::LangOptions LangOpts;
-	// clang::IntrusiveRefCntPtr<clang::FileManager> FileMgr;
-	// clang::IntrusiveRefCntPtr<clang::SourceManager> SourceMgr;
-	// std::vector<std::string> TemporaryFiles;
-	// clang::SmallVector<const llvm::MemoryBuffer *, 1> TemporaryBuffers;
-
 	CodeCompleteConsumer(const clang::CodeCompleteOptions& options);
 		// clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
 		// std::string filename, int row, int column);

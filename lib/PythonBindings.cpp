@@ -28,7 +28,7 @@ PYBIND11_PLUGIN(Clara)
 		.def_readwrite("systemHeaders",                    &SessionOptions::systemHeaders, "The system headers for the session.")
 		.def_readwrite("frameworks",                       &SessionOptions::frameworks, "The list of directories where OSX system frameworks reside.")
 		.def_readwrite("builtinHeaders",                   &SessionOptions::builtinHeaders, "The builtin headers for the session.")
-		.def_readwrite("jsonCompileCommands",              &SessionOptions::jsonCompileCommands, "The directory where the compile commands file resides (in JSON)")
+		.def_readwrite("astFile",                          &SessionOptions::astFile, "The AST file corresponding to this filename.")
 		.def_readwrite("invocation",                       &SessionOptions::invocation, "The command line arguments for this translation unit.")
 		.def_readwrite("workingDirectory",                 &SessionOptions::workingDirectory, "The working directory for the command line arguments in the invocation.")
 		.def_readwrite("languageStandard",                 &SessionOptions::languageStandard, "The language standard (lang_cxx11, lang_cxx14, lang_cxx1z)")
@@ -44,6 +44,7 @@ PYBIND11_PLUGIN(Clara)
 		.def("codeCompleteAsync", &Session::codeCompleteAsync)
 		.def("reparse",           &Session::reparse)
 		.def("filename",          &Session::getFilename)
+		.def("save",              &Session::save)
 	;
 
 	return m.ptr();

@@ -6,19 +6,10 @@
 namespace Clara {
 
 CodeCompleteConsumer::CodeCompleteConsumer(const clang::CodeCompleteOptions& options) 
-	// clang::IntrusiveRefCntPtr<clang::FileManager> fileManager, 
-	// std::string filename, int row, int column)
 : clang::CodeCompleteConsumer(options, false)
-// , DiagOpts(new clang::DiagnosticOptions)
-// , Diag(new clang::DiagnosticsEngine(clang::IntrusiveRefCntPtr<clang::DiagnosticIDs>(new clang::DiagnosticIDs), &*DiagOpts))
-// , FileMgr(fileManager)
-// , SourceMgr(new clang::SourceManager(*Diag, *FileMgr))
-// , mFilename(std::move(filename))
-// , mRow(row)
-// , mColumn(column)
 , mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
 {
-	/* empty */
+	/* empty */ 
 }
 
 void CodeCompleteConsumer::ProcessCodeCompleteResults(
@@ -56,7 +47,12 @@ void CodeCompleteConsumer::ProcessOverloadCandidates(
 	clang::CodeCompleteConsumer::OverloadCandidate* candidates,
 	unsigned numCandidates) 
 {
-	/* empty */
+	auto& ccs = *candidates[currentArg].CreateSignatureString(currentArg, sema, getAllocator(), getCodeCompletionTUInfo(), true);
+	unsigned argCount = 0;
+	std::string first, second, informative;
+	ProcessCodeCompleteString(ccs, argCount, first, second, informative);
+	first = "OVERLOAD..." + first;
+	mResultList.emplace_back(std::move(first), std::move(second));
 }
 
 std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteResult(

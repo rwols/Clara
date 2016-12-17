@@ -8,7 +8,7 @@ install(FILES
 	GenerateSystemHeadersCommand.py
 	Main.sublime-menu
 	OpenClaraSettingsCommand.py
-	ViewEventListener.py
+	# ViewEventListener.py
 
 	DESTINATION "${claraInstallFolder}")
 

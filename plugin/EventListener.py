@@ -22,12 +22,16 @@ def plugin_loaded():
 	clara_print('EventListener loaded.')
 
 def clara_print(message):
-	with _printLock as lock:
-		t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-		print('Clara:{}: {}'.format(t, message))
+	if sublime.load_settings('Clara.sublime-settings').get('debug', False):
+		with _printLock as lock:
+			t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
+			print('Clara:{}: {}'.format(t, message))
 
-def has_correct_extension(filename):
-	return os.path.splitext(filename)[1] in ['.cpp', '.cc', '.c', '.cxx', '.objc']
+def has_correct_extension(file_name):
+	return os.path.splitext(file_name)[1] in ['.cpp', '.cc', '.c', '.cxx']
+
+def is_header_file(file_name):
+	return os.path.splitext(file_name)[1] in ['.hpp', '.hh', '.h', '.hxx']
 
 def replace_single_quotes_by_tag(message, tag):
 	parts = message.split("'")
@@ -47,8 +51,8 @@ class ViewData(object):
 	def __init__(self, view):
 		super(ViewData, self).__init__()
 		self.view = view
-		self.phantomSet = sublime.PhantomSet(view)
-		self.phantoms = []
+		self.active_diagnostics = sublime.PhantomSet(self.view)
+		self.new_diagnostics = []
 
 class FileBufferData(object):
 	"""FileBufferData"""
@@ -56,19 +60,16 @@ class FileBufferData(object):
 		super(FileBufferData, self).__init__()
 		self.file_name = initial_view.file_name()
 		clara_print('Created new FileBufferData for file "{}"'.format(self.file_name))
-		assert has_correct_extension(self.file_name)
+		assert has_correct_extension(self.file_name) or is_header_file(self.file_name)
 		self.session = None
 		self.session_is_loading = True
 		self.is_reparsing = False
 		self.views = {}
 		self.views[initial_view.id()] = ViewData(initial_view)
-		self.initial_view = initial_view
+		self.initial_view = initial_view # FIXME: Make do without this member variable
 		self.point_to_completions = {}
 		self.inflight_completions = set()
 		threading.Thread(target=self._initialize_session).start()
-
-	def __del__(self):
-		clara_print('Closed: {}'.format(self.file_name))
 
 	def add_view(self, new_view):
 		if not self.has_view(new_view):
@@ -79,6 +80,12 @@ class FileBufferData(object):
 
 	def remove_view(self, view):
 		self.views.pop(view.id(), None)
+		# FIXME: Loading an ASTUnit via an AST file results in assertion failures.
+		# if not self.views:
+		# 	try:
+		# 		self.session.save()
+		# 	except Exception as e:
+		# 		pass
 
 	def set_status(self, message):
 		for view_id, view_data in self.views.items():
@@ -97,12 +104,21 @@ class FileBufferData(object):
 		if not self.session or self.session_is_loading or self.is_reparsing or len(locations) > 1:
 			return None
 		point = locations[0]
-		# if (not view.match_selector(point, 'source.c++') or
-		# 	('-' in prefix and not '->' in prefix) or
-		# 	':' in prefix):
-		# 	return None
 		if not view.match_selector(point, 'source.c++'):
 			return None
+		if '-' in prefix and not '->' in prefix:
+			# Not sure why this triggers.
+			# FIXME: This is hacky, find out why this triggers.
+			return None
+		if ':' in prefix:
+			# Not sure why this triggers.
+			# FIXME: This is hacky, find out why this triggers.
+			return None
+		if not view.match_selector(point, 'source.c++'):
+			return None
+		# for pos in view.word(point):
+		# 	if pos in self.inflight_completions:
+		# 		return None
 		clara_print('popping point {}'.format(point))
 		completions = self.point_to_completions.pop(point, None)
 		if completions:
@@ -125,73 +141,43 @@ class FileBufferData(object):
 				col += 1 # clang columns are 1-based, sublime columns are 0-based
 				self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, col, self._completion_callback)
 
-	# def on_query_completions(self, prefix, locations):
-	# 	"""Find all possible completions."""
-	# 	if not self.session or self.isReparsing:
-	# 		return
-	# 	point = locations[0]
-	# 	if len(locations) > 1:
-	# 		return
-	# 	if not self.view.match_selector(point, 'source.c++'):
-	# 		return
-	# 	clara_print('point = {}, prefix = {}'.format(point, prefix))
-	# 	completions = self.point2completions.pop(point, None)
-	# 	if completions:
-	# 		if completions == 'FOUND NOTHING':
-	# 			clara_print('found completions via a callback, but no completions were returned.')
-	# 			return None
-	# 		else:
-	# 			clara_print('found completions!')
-	# 			self.numTimesCompletionsDelivered += 1
-	# 			if self.numTimesCompletionsDelivered > 4:
-	# 				self.numTimesCompletionsDelivered = 0
-	# 				threading.Thread(target=self._reparse).start()
-	# 			return (completions, sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
-	# 	else:
-	# 		if point in self.inFlightCompletionAtPoint:
-	# 			clara_print('Already completing at point {}, so wait.'.format(point))
-	# 			return None
-	# 		else:
-	# 			clara_print('found no completions. Calling Session::codeCompleteAsync.')
-	# 			self.inFlightCompletionAtPoint.add(point)
-	# 			row, col = self.view.rowcol(point)
-	# 			unsavedBuffer = self.view.substr(sublime.Region(0, self.view.size()))
-	# 			row += 1 # clang rows are 1-based, sublime rows are 0-based
-	# 			col += 1 # clang columns are 1-based, sublime columns are 0-based
-	# 			self.session.codeCompleteAsync(unsavedBuffer, row, col, self._completion_callback)
-
-	def _diagnostic_callback(self, filename, severity, row, column, message):
-		active_view = sublime.active_window().active_view()
-		if filename != '' and filename != self.file_name:
-			clara_print("{}: {}:{}:{}: {}".format(severity, filename, str(row), str(column), message))
+	def _diagnostic_callback(self, file_name, severity, row, column, message):
+		print('boo')
+		DIAG_PANEL_NAME = 'Diagnostics'
+		active_view = sublime.active_window().active_view().id()
+		diag_view = sublime.create_output_panel(DIAG_PANEL_NAME)
+		if file_name != '' and file_name != self.file_name:
+			diag_message = "{}: {}:{}:{}: {}".format(severity, file_name, str(row), str(column), message)
+			clara_print(diag_message)
+			diag_view.run_command('insert', {'characters': diag_message})
 			return
 		view_data = self.views[active_view.id()]
 		div_class = None
 		if severity == 'begin':
-			clara_print('BEGIN DIAGNOSIS'.format(filename))
-			# self.newPhantoms = []
-			# assert isinstance(self.newPhantoms, list)
-			# self.diagnosticPhantomSet.update(self.newPhantoms)
+			# clara_print('BEGIN DIAGNOSIS'.format(file_name))
+			view_data.new_diagnostics = []
+			view_data.active_diagnostics.update(view_data.new_diagnostics)
+			sublime.destroy_output_panel(DIAG_PANEL_NAME)
 			return
 		elif severity == 'finish':
-			clara_print('END DIAGNOSIS'.format(filename))
-			view_data.newPhantoms = []
-			view_data.diagnosticPhantomSet.update(view_data.newPhantoms)
+			# clara_print('END DIAGNOSIS'.format(file_name))
+			# view_data.new_diagnostics = []
+			# view_data.active_diagnostics.update(view_data.new_diagnostics)
 			return
 		elif severity == 'warning':
-			clara_print('{}, warning, {}, {}, {}'.format(filename, row, column, message))
+			clara_print('{}, warning, {}, {}, {}'.format(file_name, row, column, message))
 			div_class = 'warning'
 		elif severity == 'error' or severity == 'fatal':
-			clara_print('{}, error, {}, {}, {}'.format(filename, row, column, message))
+			clara_print('{}, error, {}, {}, {}'.format(file_name, row, column, message))
 			div_class = 'error'
 		elif severity == 'note':
-			clara_print('{}, note, {}, {}, {}'.format(filename, row, column, message))
+			clara_print('{}, note, {}, {}, {}'.format(file_name, row, column, message))
 			div_class = 'inserted'
 		elif severity == 'remark':
-			clara_print('{}, remark, {}, {}, {}'.format(filename, row, column, message))
+			clara_print('{}, remark, {}, {}, {}'.format(file_name, row, column, message))
 			div_class = 'inserted'
 		else:
-			clara_print('{}, unkown, {}, {}, {}'.format(filename, row, column, message))
+			clara_print('{}, unkown, {}, {}, {}'.format(file_name, row, column, message))
 			div_class = 'inserted'
 		point = 0
 		if row != -1 or column != -1:
@@ -205,8 +191,9 @@ class FileBufferData(object):
 		message = replace_single_quotes_by_tag(message, 'b')
 		message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(div_class, message)
 		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
-		view_data.newPhantoms.append(phantom)
-		view_data.diagnosticPhantomSet.update(view_data.newPhantoms)
+		view_data.new_diagnostics.append(phantom)
+		clara_print('updating diagnostics for view {}, {}'.format(view_data.view.id(), view_data.view.file_name()))
+		view_data.active_diagnostics.update(view_data.new_diagnostics)
 
 	def _completion_callback(self, view_id, row, col, completions):
 		row -= 1 # Clang rows are 1-based, sublime rows are 0-based.
@@ -229,8 +216,8 @@ class FileBufferData(object):
 				view.run_command('hide_auto_complete')
 			view.run_command('auto_complete', {
 				'disable_auto_insert': True,
-				'api_completions_only': True,
-				'next_competion_if_showing': False})
+				'api_completions_only': False,
+				'next_competion_if_showing': True})
 
 	def _load_headers(self, key):
 		settings = sublime.load_settings('Clara.sublime-settings')
@@ -253,7 +240,7 @@ class FileBufferData(object):
 		if not has_correct_extension(self.file_name):
 			# The file doesn't have the correct extension, so forget about it.
 			return
-		compdb = EventListener.getCompilationDatabase(self.initial_view)
+		compdb = EventListener.get_compilation_database_for_view(self.initial_view)
 		if not compdb:
 			# Not even going to try.
 			return
@@ -286,6 +273,12 @@ class FileBufferData(object):
 		settings = sublime.load_settings('Clara.sublime-settings')
 		options.filename = self.file_name
 
+		# AST file handling.
+		ast_dir = os.path.join(options.workingDirectory, ".clara")
+		options.astFile = os.path.join(ast_dir, os.path.basename(self.file_name) + ".ast")
+		clara_print('The AST working file will be "{}"'.format(options.astFile))
+		os.makedirs(ast_dir, exist_ok=True)
+
 		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
 		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
 		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
@@ -298,12 +291,14 @@ class FileBufferData(object):
 
 	def _reparse(self):
 		clara_print('Reparsing {}'.format(self.file_name))
+		self.set_status('Reparsing, this can take a while!')
 		self.is_reparsing = True
-		self.session.reparse(0, self._reparseCallback)
+		self.session.reparse(0, self._reparse_callback)
 		
 
-	def _reparseCallback(self, view_id, success):
+	def _reparse_callback(self, view_id, success):
 		self.is_reparsing = False
+		self.erase_status()
 		if success:
 			clara_print('Reparsed "{}"'.format(self.file_name))
 		else:
@@ -318,9 +313,9 @@ class EventListener(sublime_plugin.EventListener):
 	activeWindows = set()
 
 	@classmethod
-	def getCompilationDatabase(cls, view):
-		cls._ensureExistenceOfCompilationDatabase(view)
+	def get_compilation_database_for_view(cls, view):
 		try:
+			cls._ensure_compilation_database_exists_for_view(view)
 			database = cls.compilationDatabases[view.window().id()]
 			return database
 		except KeyError as keyError:
@@ -336,16 +331,16 @@ class EventListener(sublime_plugin.EventListener):
 
 	def on_new(self, view):
 		clara_print('on_new: {}, {}'.format(view.id(), view.file_name()))
-		if EventListener._ensureExistenceOfCompilationDatabase(view):
+		if EventListener._ensure_compilation_database_exists_for_view(view):
 			if not self._ensure_view_is_loaded(view):
 				clara_print('Did not load {}, {}'.format(view.id(), view.file_name()))
 
-	def on_load(self, view):
-		clara_print('on_load: {}, {}'.format(view.id(), view.file_name()))
-		self.on_new(view)
-
 	def on_clone(self, view):
 		clara_print('on_clone: {}, {}'.format(view.id(), view.file_name()))
+		self.on_new(view)
+
+	def on_load(self, view):
+		clara_print('on_load: {}, {}'.format(view.id(), view.file_name()))
 		self.on_new(view)
 
 	def on_activated(self, view):
@@ -367,21 +362,23 @@ class EventListener(sublime_plugin.EventListener):
 			return file_buffer_data.on_query_completions(view, prefix, locations)
 
 	def on_activated(self, view):
-		EventListener._ensureExistenceOfCompilationDatabase(view)
+		EventListener._ensure_compilation_database_exists_for_view(view)
 
 	@classmethod
-	def _ensureExistenceOfCompilationDatabase(cls, view):
-		filename = view.file_name()
-		if not filename or not has_correct_extension(filename):
+	def _ensure_compilation_database_exists_for_view(cls, view):
+		file_name = view.file_name()
+		if not file_name or not has_correct_extension(file_name):
 			return False
 		window = view.window()
+		if window is None:
+			return False
 		if window.id() not in cls.activeWindows:
 			cls.activeWindows.add(window.id())
-			cls._loadCompilationDatabase(window)
+			cls._load_compilation_database_for_window(window)
 		return True
 
 	@classmethod
-	def _loadCompilationDatabase(cls, window):
+	def _load_compilation_database_for_window(cls, window):
 		try:
 			project = window.project_data()
 			if project is None: raise Exception('No sublime-project found for window {}.'.format(window.id()))
@@ -401,7 +398,7 @@ class EventListener(sublime_plugin.EventListener):
 	def _get_file_buffer_data_for_view(self, view):
 		file_name = view.file_name()
 		if view.is_scratch() or not file_name:
-			clara_print('View {}, {} is a scratch or has no filename.'.format(view.id(), file_name))
+			clara_print('View {}, {} is a scratch or has no file_name.'.format(view.id(), file_name))
 			return None
 		elif file_name in self.file_buffers:
 			file_buffer_data = self.file_buffers[file_name]

@@ -11,6 +11,10 @@ struct SomeStruct
 
     int data;
 
+    SomeStruct(int x) : data(x) {}
+    SomeStruct(float x) : data(static_cast<int>(x)) {}
+    SomeStruct(double x) : data(static_cast<int>(x)) {}
+
 
     /**
      * @brief      does whatty things
@@ -26,6 +30,10 @@ struct SomeStruct
             << ", my data: " << this->data << " with extra param " << extraParamater << '\n';
         return extraParamater + data;
     }
+
+    float f(int x);
+    float f(float x);
+    float f(double x);
 
 private:
 
@@ -81,9 +89,7 @@ int main()
             break;
     }
 
-    baz(30.0f, 40.0f);
-
-    baz(30.0f, 40.0f);
+    SomeStruct al;
 
     return 0;
 }

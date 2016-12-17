@@ -69,6 +69,12 @@ public:
 
 	void reparse(const int viewID, pybind11::object reparseCallback);
 
+	/**
+	 * @brief      Saves the session to an abstract AST file in the build
+	 *             directory under the hidden subfolder ".clara".
+	 */
+	void save() const;
+
 	void report(const char* message) const;
 
 private:

@@ -21,12 +21,14 @@ struct SessionOptions
 	std::string builtinHeaders;
 	std::string jsonCompileCommands;
 	std::string workingDirectory;
+	std::string astFile;
 	std::vector<std::string> invocation;
 	clang::LangStandard::Kind languageStandard;
 	bool codeCompleteIncludeMacros = true;
 	bool codeCompleteIncludeCodePatterns = true;
 	bool codeCompleteIncludeGlobals = true;
 	bool codeCompleteIncludeBriefComments = true;
+	bool codeCompleteIncludeOptionalArguments = true;
 };
 
 /**
