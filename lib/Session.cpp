@@ -189,9 +189,8 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 	std::thread task( [this, viewID, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
 		// We want only one thread at a time to execute this
-		std::unique_lock<std::mutex> methodLock(mMethodMutex);
+		std::lock_guard<std::mutex> methodLock(mMethodMutex);
 		const auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
-		methodLock.unlock(); // unlock it, we're done with mUnit
 		try
 		{
 			pybind11::gil_scoped_acquire pythonLock;

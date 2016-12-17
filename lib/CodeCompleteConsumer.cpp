@@ -47,12 +47,8 @@ void CodeCompleteConsumer::ProcessOverloadCandidates(
 	clang::CodeCompleteConsumer::OverloadCandidate* candidates,
 	unsigned numCandidates) 
 {
-	auto& ccs = *candidates[currentArg].CreateSignatureString(currentArg, sema, getAllocator(), getCodeCompletionTUInfo(), true);
-	unsigned argCount = 0;
-	std::string first, second, informative;
-	ProcessCodeCompleteString(ccs, argCount, first, second, informative);
-	first = "OVERLOAD..." + first;
-	mResultList.emplace_back(std::move(first), std::move(second));
+	// TODO (what does this even do?)
+	
 }
 
 std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteResult(

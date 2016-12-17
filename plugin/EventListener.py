@@ -205,7 +205,8 @@ class FileBufferData(object):
 			# Too late, user is not interested anymore.
 			return
 		if point in self.point_to_completions:
-			clara_print('point {} is already in my completion dictionary. :-( too late!'.format(point))
+			clara_print('point {} is already in my completion dictionary. '
+				':-( too late!'.format(point))
 			return
 		clara_print('adding point {}'.format(point))
 		if len(completions) == 0:
@@ -227,11 +228,13 @@ class FileBufferData(object):
 			return headers
 		elif not _hasLoadedHeadersAtleastOnce:
 			_hasLoadedHeadersAtleastOnce = True
-			if sublime.ok_cancel_dialog('You do not yet have headers set up. Do you want to generate them now?'):
+			if sublime.ok_cancel_dialog('You do not yet have headers set up. '
+				'Do you want to generate them now?'):
 				sublime.run_command('generate_system_headers')
 				return settings.get(key)
 			else:
-				sublime.error_message('Clara will not work properly without setting up headers!')
+				sublime.error_message(
+					'Clara will not work properly without setting up headers!')
 				return None
 		else:
 			return None
@@ -240,32 +243,37 @@ class FileBufferData(object):
 		if not has_correct_extension(self.file_name):
 			# The file doesn't have the correct extension, so forget about it.
 			return
-		compdb = EventListener.get_compilation_database_for_view(self.initial_view)
+		compdb = EventListener.get_compilation_database_for_view(
+			self.initial_view)
 		if not compdb:
 			# Not even going to try.
 			return
 
 		# Start building the SessionOptions object, to build a Session object.
 		options = SessionOptions()
-		options.invocation, options.workingDirectory = compdb.get(self.file_name)
+		options.invocation, options.workingDirectory = compdb.get(
+			self.file_name)
 		if not options.invocation:
 			# This file is not in the compilation database, so forget about it.
-			clara_print('The file "{}" is not in the compilation database, so we are not doing code-completion.'
-				.format(self.file_name))
+			clara_print('The file "{}" is not in the compilation database, '
+				'so we are not doing code-completion.'.format(self.file_name))
 			return
 
 		# Load in the system headers and builtin headers.
 		system_headers = self._load_headers('system_headers')
 		frameworks = self._load_headers('system_frameworks')
+		
 		options.systemHeaders = [""] if system_headers is None else system_headers
-		# options.builtinHeaders = '' if builtinHeaders is None else builtinHeaders
+
 		options.frameworks = '' if frameworks is None else frameworks
 
 		# At this point we can't really fail, so set the view's status to
 		# something informative to let the user know that we are parsing.
-		self.set_status('Parsing file for auto-completion, this can take a while!')
-		clara_print('Loading "{}" with working directory "{}" and compiler invocation {}'
-			.format(self.file_name, options.workingDirectory, str(options.invocation)))
+		self.set_status(
+			'Parsing file for auto-completion, this can take a while!')
+		clara_print('Loading "{}" with working directory "{}" '
+			'and compiler invocation {}'.format(self.file_name, 
+				options.workingDirectory, str(options.invocation)))
 
 		options.diagnosticCallback = self._diagnostic_callback
 		options.logCallback = clara_print
@@ -275,14 +283,22 @@ class FileBufferData(object):
 
 		# AST file handling.
 		ast_dir = os.path.join(options.workingDirectory, ".clara")
-		options.astFile = os.path.join(ast_dir, os.path.basename(self.file_name) + ".ast")
+		options.astFile = os.path.join(ast_dir, 
+			os.path.basename(self.file_name) + ".ast")
 		clara_print('The AST working file will be "{}"'.format(options.astFile))
 		os.makedirs(ast_dir, exist_ok=True)
 
-		options.codeCompleteIncludeMacros = settings.get('include_macros', True)
-		options.codeCompleteIncludeCodePatterns = settings.get('include_code_patterns', True)
-		options.codeCompleteIncludeGlobals = settings.get('include_globals', True)
-		options.codeCompleteIncludeBriefComments = settings.get('include_brief_comments', True)
+		options.codeCompleteIncludeMacros = settings.get(
+			'include_macros', True)
+
+		options.codeCompleteIncludeCodePatterns = settings.get(
+			'include_code_patterns', True)
+
+		options.codeCompleteIncludeGlobals = settings.get(
+			'include_globals', True)
+
+		options.codeCompleteIncludeBriefComments = settings.get(
+			'include_brief_comments', True)
 
 		self.session = Session(options)
 		self.session_is_loading = False # Success
@@ -302,7 +318,8 @@ class FileBufferData(object):
 		if success:
 			clara_print('Reparsed "{}"'.format(self.file_name))
 		else:
-			clara_print('Error occured while reparsing "{}"'.format(self.file_name))
+			clara_print('Error occured while reparsing "{}"'
+				.format(self.file_name))
 			self.session = None
 			self.session_is_loading = True
 
@@ -333,7 +350,8 @@ class EventListener(sublime_plugin.EventListener):
 		clara_print('on_new: {}, {}'.format(view.id(), view.file_name()))
 		if EventListener._ensure_compilation_database_exists_for_view(view):
 			if not self._ensure_view_is_loaded(view):
-				clara_print('Did not load {}, {}'.format(view.id(), view.file_name()))
+				clara_print('Did not load {}, {}'
+					.format(view.id(), view.file_name()))
 
 	def on_clone(self, view):
 		clara_print('on_clone: {}, {}'.format(view.id(), view.file_name()))
@@ -381,24 +399,32 @@ class EventListener(sublime_plugin.EventListener):
 	def _load_compilation_database_for_window(cls, window):
 		try:
 			project = window.project_data()
-			if project is None: raise Exception('No sublime-project found for window {}.'.format(window.id()))
+			if project is None: raise Exception(
+				'No sublime-project found for window {}.'.format(window.id()))
 			cmakeSettings = project.get('cmake')
-			if cmakeSettings is None: raise Exception('No cmake settings found for "{}".'.format(window.project_file_name()))
-			cmakeSettings = sublime.expand_variables(cmakeSettings, window.extract_variables())
+			if cmakeSettings is None: raise Exception(
+				'No cmake settings found for "{}".'.format(
+					window.project_file_name()))
+			cmakeSettings = sublime.expand_variables(
+				cmakeSettings, window.extract_variables())
 			buildFolder = cmakeSettings.get('build_folder')
 			if buildFolder is None:
-				raise KeyError('No "build_folder" key present in "cmake" settings of  "{}".'.format(window.project_file_name()))
+				raise KeyError(
+					'No "build_folder" key present in "cmake" settings of "{}".'
+					.format(window.project_file_name()))
 			else:
 				compilationDatabase = CompilationDatabase(buildFolder)
 				cls.compilationDatabases[window.id()] = compilationDatabase
-				clara_print('Loaded compilation database for window {}, located in "{}"'.format(window.id(), buildFolder))
+				clara_print('Loaded compilation database for window {}, located'
+				' in "{}"'.format(window.id(), buildFolder))
 		except Exception as e:
 			clara_print('Window {}: {}'.format(window.id(), str(e)))
 
 	def _get_file_buffer_data_for_view(self, view):
 		file_name = view.file_name()
 		if view.is_scratch() or not file_name:
-			clara_print('View {}, {} is a scratch or has no file_name.'.format(view.id(), file_name))
+			clara_print('View {}, {} is a scratch or has no file_name.'
+				.format(view.id(), file_name))
 			return None
 		elif file_name in self.file_buffers:
 			file_buffer_data = self.file_buffers[file_name]
@@ -425,5 +451,6 @@ class EventListener(sublime_plugin.EventListener):
 			clara_print('Loaded {}, {}'.format(view.id(), view.file_name()))
 			return True
 		else:
-			clara_print('Did not load {}, {}'.format(view.id(), view.file_name()))
+			clara_print('Did not load {}, {}'
+				.format(view.id(), view.file_name()))
 			return False
