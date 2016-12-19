@@ -77,8 +77,6 @@ int main()
     asdf.what(asdf, 20.0f);
     baz(10.0f, 20.0f);
 
-    
-
     Color color = red;
     switch (color)
     {

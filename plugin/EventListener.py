@@ -81,7 +81,7 @@ class FileBufferData(object):
 	def __init__(self, initial_view):
 		super(FileBufferData, self).__init__()
 		self.file_name = initial_view.file_name()
-		assert has_correct_extension(self.file_name) or is_header_file(self.file_name)
+		assert is_header_or_implementation_file(self.file_name)
 		self.session = None
 		self.session_is_loading = True
 		self.is_reparsing = False

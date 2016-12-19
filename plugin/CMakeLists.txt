@@ -1,4 +1,4 @@
-install(DIRECTORY . DESTINATION "${claraInstallFolder}" PERMISSIONS OWNER_READ)
+install(DIRECTORY . DESTINATION "${claraInstallFolder}")
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 
