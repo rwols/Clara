@@ -33,7 +33,7 @@ private:
 
 int main()
 {
-    World world;
+    World world(4);
     world.data = 5;
 
     world.data = 3;
