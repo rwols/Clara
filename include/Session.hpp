@@ -67,7 +67,12 @@ public:
 	 */
 	const std::string& getFilename() const noexcept;
 
-	void reparse(const int viewID, pybind11::object reparseCallback);
+	/**
+	 * @brief      Reparse the AST, possibly recompiling the preamble.
+	 *
+	 * @return     True on success, false on failure.
+	 */
+	bool reparse();
 
 	/**
 	 * @brief      Saves the session to an abstract AST file in the build

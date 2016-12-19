@@ -31,6 +31,9 @@ class ProgressIndicator():
     :param thread:
         The thread to track for activity
 
+    :param status_key
+        The key for the status bar
+
     :param message:
         The message to display next to the activity indicator
 
@@ -45,11 +48,11 @@ class ProgressIndicator():
         self._success_message = success_message
         self._success_message_lock = threading.RLock()
         self.display_message_length = kwargs.get(
-            'display_message_length', 1000
+            'display_message_length', 4000
         )
 
         if self.display_message_length < 0:
-            self.display_message_length = 1000
+            self.display_message_length = 4000
 
         self.addend = 1
         self.size = 8

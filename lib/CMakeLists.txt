@@ -37,12 +37,10 @@ target_link_libraries(Clara LINK_PRIVATE clangFrontend clangTooling)
 
 file(GLOB_RECURSE builtin_headers ../../../lib/Headers/*.h)
 install(FILES ${builtin_headers}
-	DESTINATION "${claraInstallFolder}/include"
-	PERMISSIONS OWNER_READ)
+	DESTINATION "${claraInstallFolder}/include")
 
 install(TARGETS Clara 
-	DESTINATION "${claraInstallFolder}"
-	PERMISSIONS OWNER_READ)
+	DESTINATION "${claraInstallFolder}")
 
 add_custom_target(ClaraInstall 
 	${CMAKE_COMMAND} 

@@ -126,7 +126,11 @@ class FileBufferData(object):
 		if (self.session and 
 			not self.session_is_loading and 
 			not self.is_reparsing):
-			threading.Thread(target=self._reparse).start()
+			thread = threading.Thread(target=self._reparse)
+			basename = os.path.basename(self.file_name)
+			ProgressIndicator(thread, self.file_name, 
+				"Reparsing {}".format(basename), "Reparsed {}".format(basename))
+			thread.start()
 
 	def on_query_completions(self, view, prefix, locations):
 		assert view.id() in self.views
@@ -349,10 +353,14 @@ class FileBufferData(object):
 		# self.erase_status()
 
 	def _reparse(self):
-		clara_print('Reparsing {}'.format(self.file_name))
-		self.set_status('Reparsing, this can take a while!')
+		clara_print('Reparsing "{}"'.format(self.file_name))
 		self.is_reparsing = True
-		self.session.reparse(0, self._reparse_callback)
+		if not self.session.reparse():
+			clara_print('Error occured during parsing of "{}"! This session will be disabled.'.format(self.file_name))
+			self.session = None
+			self.session_is_loading = True
+		self.is_reparsing = False
+		clara_print('Reparsed "{}"'.format(self.file_name))
 		
 
 	def _reparse_callback(self, view_id, success):

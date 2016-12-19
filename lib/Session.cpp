@@ -217,20 +217,15 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 	task.detach();
 }
 
-void Session::reparse(const int viewID, pybind11::object reparseCallback)
+bool Session::reparse()
 {
-	if (reparseCallback.is_none())
-	{
-		return;
-	}
 	std::lock_guard<std::mutex> methodLock(mMethodMutex);
 	bool success;
-	// enter scope
 	{
 		pybind11::gil_scoped_release releaser;
 		success = !mUnit->Reparse(mPchOps);
 	}
-	reparseCallback(viewID, success);
+	return success;
 }
 
 void Session::save() const
