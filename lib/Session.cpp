@@ -56,6 +56,8 @@ Session::Session(const SessionOptions& options)
 	{
 		throw std::runtime_error("Failed to parse AST!");
 	}
+
+	std::string resourceDirMessage("Resource directory is ");
 }
 
 clang::CompilerInvocation* Session::createInvocationFromOptions()
@@ -126,7 +128,9 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 
 	// The resourcedir is hardcoded into the library now...
 	// Don't see any other way on how to solve this.
-	// headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
+	headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
+
+	headerSearchOpts.AddPath(mOptions.builtinHeaders, clang::frontend::System, false, false);
 
 	for (const auto& systemHeader : mOptions.systemHeaders)
 	{

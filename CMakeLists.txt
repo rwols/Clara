@@ -11,8 +11,8 @@
 #
 # $ mkdir build
 # $ cd build
-# $ cmake .. -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON
-# $ make Clara -j8
+# $ cmake .. -DLLVM_ENABLE_EH=ON -DLLVM_ENABLE_RTTI=ON -DCLANG_RESOURCE_DIR=/usr/local/lib/clang/4.0.0
+# $ make ClaraInstall -j8
 #
 # This builds only this library (and all of its dependencies)
 # with 8 threads. It should not take more than 3 minutes, while
@@ -28,7 +28,6 @@ else()
 	set(claraInstallFolderPrefix "$ENV{HOME}/.config/sublime-text-3")
 endif()
 set(claraInstallFolder "${claraInstallFolderPrefix}/Packages/Clara")
-set(CLANG_RESOURCE_DIR "." CACHE STRING "The clang resource directory.")
 
 mark_as_advanced(claraInstallFolderPrefix)
 mark_as_advanced(claraInstallFolder)

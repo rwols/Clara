@@ -38,5 +38,11 @@ int main()
 
     world.data = 3;
 
+    ASDF asdf;
+
+    asdf.another = 2.0f;
+
+    
+
     return 0;
 }

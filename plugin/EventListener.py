@@ -45,6 +45,7 @@ def sublime_point_to_clang_rowcol(view, point):
 	return (row + 1, col + 1)
 
 def clang_rowcol_to_sublime_point(view, row, col):
+	frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 	return view.text_point(row - 1, col - 1)
 
 def replace_single_quotes_by_tag(message, tag):
@@ -85,8 +86,9 @@ class FileBufferData(object):
 		self.session = None
 		self.session_is_loading = True
 		self.is_reparsing = False
-		self.views = { initial_view.id(): ViewData(initial_view) }
-		# self.views[initial_view.id()] = ViewData(initial_view)
+		self.views = {}
+		# self.views = { initial_view.id(): ViewData(initial_view) }
+		self.views[initial_view.id()] = ViewData(initial_view)
 		self.initial_view = initial_view # FIXME: Make do without this member variable
 		self.point_to_completions = {}
 		self.inflight_completions = set()
@@ -168,25 +170,16 @@ class FileBufferData(object):
 				self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, col, self._completion_callback)
 
 	def _diagnostic_callback(self, file_name, severity, row, column, message):
-		DIAG_PANEL_NAME = 'Diagnostics'
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
-		# active_view = sublime.active_window().active_view().id()
-		# diag_view = sublime.create_output_panel(DIAG_PANEL_NAME)
 		diag_message = "{}: {}:{}:{}: {}".format(
 			severity, file_name, str(row), str(column), message)
 		clara_print(diag_message)
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
 		if file_name != '' and file_name != self.file_name:
-			# diag_view.run_command('insert', {'characters': diag_message})
+			frameinfo = getframeinfo(currentframe())
+			print(frameinfo.filename, frameinfo.lineno)
 			return
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
-		view_data = self.views[active_view.id()]
+		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 		div_class = None
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
+		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 		if severity == 'begin':
 			# clara_print('BEGIN DIAGNOSIS'.format(file_name))
 			view_data.new_diagnostics = []
@@ -208,23 +201,43 @@ class FileBufferData(object):
 			div_class = 'inserted'
 		else:
 			div_class = 'inserted'
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
-		point = 0
-		if row != -1 or column != -1:
-			point = clang_rowcol_to_sublime_point(view_data.view, row, col)
-			# The reason is not clear, but Clang somehow puts error too much to
-			# the right (two character points to be precise), so we subtract
-			# that here again to make the phantoms line up at the exact error.
-			point = max(0, point - 2)
-		region = sublime.Region(point, point)
-		message = replace_single_quotes_by_tag(message, 'b')
-		message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(div_class, message)
-		phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
-		view_data.new_diagnostics.append(phantom)
-		frameinfo = getframeinfo(currentframe())
-		print(frameinfo.filename, frameinfo.lineno)
-		view_data.active_diagnostics.update(view_data.new_diagnostics)
+		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+		for view_id, view_data in self.views.items():
+			point = 0
+			layout = 0
+			print(view_data.view.name(), view_data.view.file_name())
+			if row != -1 or column != -1:
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				assert view_data
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				assert view_data.view
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				assert isinstance(view_data.view, sublime.View)
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				point = view_data.view.text_point(row - 1, col - 1)
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				print('point: {}'.format(point))
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				point = max(0, point - 2)
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				layout = sublime.LAYOUT_BELOW
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			else:
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+				layout = sublime.LAYOUT_BLOCK
+				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			region = sublime.Region(point, point)
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			message = replace_single_quotes_by_tag(message, 'b')
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(div_class, message)
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			phantom = sublime.Phantom(region, message, layout)
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			view_data.new_diagnostics.append(phantom)
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
+			view_data.active_diagnostics.update(view_data.new_diagnostics)
+			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 
 	def _completion_callback(self, view_id, row, col, completions):
 		view = self.views[view_id].view
@@ -289,8 +302,10 @@ class FileBufferData(object):
 			return
 
 		# Load in the system headers and builtin headers.
+		builtins = self._load_headers('builtin_headers')
 		headers = self._load_headers('system_headers')
 		frameworks = self._load_headers('system_frameworks')
+		options.builtinHeaders = '' if builtins is None else builtins
 		options.systemHeaders = [""] if headers is None else headers
 		options.frameworks = '' if frameworks is None else frameworks
 
