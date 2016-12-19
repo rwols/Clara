@@ -73,7 +73,7 @@ int main()
 {
     baz(10.0f, 20.0f);
 
-    SomeStruct asdf;
+    SomeStruct asdf(5);
     asdf.what(asdf, 20.0f);
     baz(10.0f, 20.0f);
 

@@ -1,6 +1,7 @@
 import sublime, sublime_plugin, os, time, datetime, threading
 from .Clara import *
 from inspect import currentframe, getframeinfo
+from .utils.ProgressIndicator import ProgressIndicator
 
 _printer_lock = threading.Lock()
 _loaded_headers_atleast_once = False
@@ -80,8 +81,7 @@ class FileBufferData(object):
 	def __init__(self, initial_view):
 		super(FileBufferData, self).__init__()
 		self.file_name = initial_view.file_name()
-		clara_print('Created new FileBufferData for file "{}"'.format(self.file_name))
-		assert is_implementation_file(self.file_name) or is_header_file(self.file_name)
+		assert has_correct_extension(self.file_name) or is_header_file(self.file_name)
 		self.session = None
 		self.session_is_loading = True
 		self.is_reparsing = False
@@ -90,11 +90,15 @@ class FileBufferData(object):
 		self.initial_view = initial_view # FIXME: Make do without this member variable
 		self.point_to_completions = {}
 		self.inflight_completions = set()
-		threading.Thread(target=self._initialize_session).start()
+		thread = threading.Thread(target=self._initialize_session)
+		thread.start()
+		basename = os.path.basename(self.file_name)
+		ProgressIndicator(thread, self.file_name, "Parsing {}".format(basename), "Parsed {}".format(basename))
+		# threading.Thread(target=self._initialize_session).start()
 
 	def add_view(self, new_view):
 		if not self.has_view(new_view):
-			self.views[view.id()] = ViewData(new_view)
+			self.views[new_view.id()] = ViewData(new_view)
 
 	def has_view(self, view):
 		return view.id() in self.views
@@ -292,12 +296,10 @@ class FileBufferData(object):
 
 		# At this point we can't really fail, so set the view's status to
 		# something informative to let the user know that we are parsing.
-		self.set_status(
-			'Parsing file for auto-completion, this can take a while!')
 		clara_print('Loading "{}" with working directory "{}" '
 			'and compiler invocation {}'.format(self.file_name, 
 				options.workingDirectory, str(options.invocation)))
-
+		
 		options.diagnosticCallback = self._diagnostic_callback
 		options.logCallback = clara_print
 		options.codeCompleteCallback = self._completion_callback
@@ -329,7 +331,7 @@ class FileBufferData(object):
 		self.session = Session(options)
 		self.session_is_loading = False # Success
 		clara_print('Loaded "{}"'.format(self.file_name))
-		self.erase_status()
+		# self.erase_status()
 
 	def _reparse(self):
 		clara_print('Reparsing {}'.format(self.file_name))

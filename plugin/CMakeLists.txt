@@ -1,17 +1,4 @@
-install(FILES
-	Clara.sublime-commands
-	Clara.sublime-settings
-	ClaraInsertDiagnosis.py
-	CodeCompleteAtCursorCommand.py
-	DiagnoseCommand.py
-	EventListener.py
-	GenerateSystemHeadersCommand.py
-	Main.sublime-menu
-	OpenClaraSettingsCommand.py
-
-	DESTINATION "${claraInstallFolder}"
-
-	PERMISSIONS OWNER_READ)
+install(DIRECTORY . DESTINATION "${claraInstallFolder}" PERMISSIONS OWNER_READ)
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 

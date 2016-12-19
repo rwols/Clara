@@ -1,6 +1,6 @@
 import sublime, sublime_plugin, subprocess, os
 
-class GenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
+class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 	"""Generates system header info."""
 
 	def run(self):

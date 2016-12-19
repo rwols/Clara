@@ -1,6 +1,6 @@
 import sublime, sublime_plugin
 
-class DiagnoseCommand(sublime_plugin.ApplicationCommand):
+class ClaraDiagnoseCommand(sublime_plugin.ApplicationCommand):
 
 	def run(self):
 		view = sublime.active_window().new_file()

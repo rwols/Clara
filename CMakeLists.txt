@@ -28,6 +28,7 @@ else()
 	set(claraInstallFolderPrefix "$ENV{HOME}/.config/sublime-text-3")
 endif()
 set(claraInstallFolder "${claraInstallFolderPrefix}/Packages/Clara")
+set(CLANG_RESOURCE_DIR "." CACHE STRING "The clang resource directory.")
 
 mark_as_advanced(claraInstallFolderPrefix)
 mark_as_advanced(claraInstallFolder)
