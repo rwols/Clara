@@ -49,6 +49,11 @@ public:
 	{
 		return this->mIdentifier;
 	}
+
+	void foo(int x);
+	void foo(float x);
+	void foo(double x);
+
 private:
 	const char* mIdentifier;
 };

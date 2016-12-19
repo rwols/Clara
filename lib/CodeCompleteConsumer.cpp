@@ -42,13 +42,27 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 }
 
 void CodeCompleteConsumer::ProcessOverloadCandidates(
-	clang::Sema &sema, 
+	clang::Sema& sema, 
 	unsigned currentArg,
 	clang::CodeCompleteConsumer::OverloadCandidate* candidates,
 	unsigned numCandidates) 
 {
-	// TODO (what does this even do?)
-	
+	for (unsigned i = 0; i < numCandidates; ++i) 
+	{
+		if (auto ccs = candidates[i].CreateSignatureString(currentArg, sema, getAllocator(), mCCTUInfo, true)) 
+		{
+			unsigned argCount = 0;
+			std::string first, second, informative;
+			ProcessCodeCompleteString(*ccs, argCount, first, second, informative);
+			if (argCount > 0) second += "$0";
+			if (!informative.empty())
+			{
+				first += "\t";
+				first += informative;
+			}
+			mResultList.emplace_back(std::move(first), std::move(second));
+		}
+	}
 }
 
 std::pair<std::string, std::string> CodeCompleteConsumer::ProcessCodeCompleteResult(

@@ -8,9 +8,10 @@ install(FILES
 	GenerateSystemHeadersCommand.py
 	Main.sublime-menu
 	OpenClaraSettingsCommand.py
-	# ViewEventListener.py
 
-	DESTINATION "${claraInstallFolder}")
+	DESTINATION "${claraInstallFolder}"
+
+	PERMISSIONS OWNER_READ)
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 

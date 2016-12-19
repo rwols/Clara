@@ -3,7 +3,8 @@
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
 
-#define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
+#define SKIP_FUNCTION_BODIES
+// #define PRINT_HEADER_SEARCH_PATHS
 
 using namespace Clara;
 
@@ -19,24 +20,24 @@ Session::Session(const SessionOptions& options)
 	mFileOpts.WorkingDir = mOptions.workingDirectory;
 	mFileMgr = new FileManager(mFileOpts);
 
-	llvm::sys::fs::file_status astStatus, fileStatus;
-	llvm::sys::fs::status(mOptions.filename, fileStatus);
-	llvm::sys::fs::status(mOptions.astFile, astStatus);
-	if (llvm::sys::fs::exists(astStatus))
-	{
-		if (astStatus.getLastModificationTime() >= fileStatus.getLastModificationTime())
-		{
-			std::string message("Reading \"");
-			message.append(mOptions.astFile);
-			message.append("\".");
-			report(message.c_str());
-			mUnit = clang::ASTUnit::LoadFromASTFile(
-				mOptions.astFile, mPchOps->getRawReader(), mDiags, 
-				mFileOpts, true, false, llvm::None, false, true, true);
-		}
-	}
+	// llvm::sys::fs::file_status astStatus, fileStatus;
+	// llvm::sys::fs::status(mOptions.filename, fileStatus);
+	// llvm::sys::fs::status(mOptions.astFile, astStatus);
+	// if (llvm::sys::fs::exists(astStatus))
+	// {
+	// 	if (astStatus.getLastModificationTime() >= fileStatus.getLastModificationTime())
+	// 	{
+	// 		std::string message("Reading \"");
+	// 		message.append(mOptions.astFile);
+	// 		message.append("\".");
+	// 		report(message.c_str());
+	// 		mUnit = clang::ASTUnit::LoadFromASTFile(
+	// 			mOptions.astFile, mPchOps->getRawReader(), mDiags, 
+	// 			mFileOpts, true, false, llvm::None, false, true, true);
+	// 	}
+	// }
 
-	if (mUnit) return;
+	// if (mUnit) return;
 
 	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
 	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
@@ -108,7 +109,10 @@ clang::CompilerInvocation* Session::makeInvocation() const
 void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const
 {
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
-	invocation->getFrontendOpts().SkipFunctionBodies = 1;
+	
+	#ifdef SKIP_FUNCTION_BODIES
+		invocation->getFrontendOpts().SkipFunctionBodies = 1;
+	#endif
 
 	#ifdef PRINT_HEADER_SEARCH_PATHS
 		headerSearchOpts.Verbose = true;
@@ -161,6 +165,7 @@ std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const
 	consumer.includeOptionalArguments = mOptions.codeCompleteIncludeOptionalArguments;
 	LangOptions langOpts = mUnit->getLangOpts();
 
+	// mDiags = new DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false);
 	mDiags->Reset();
 	mStoredDiags.clear();
 	IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
@@ -186,15 +191,19 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 {
 	using namespace clang;
 	using namespace clang::frontend;
+
+	// No use in code-completion if there is no callback.
+	if (callback.is_none()) return;
+
 	std::thread task( [this, viewID, row, column, callback{std::move(callback)}, unsavedBuffer{std::move(unsavedBuffer)} ] () -> void
 	{
 		// We want only one thread at a time to execute this
 		std::lock_guard<std::mutex> methodLock(mMethodMutex);
-		const auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
+		auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
 		try
 		{
 			pybind11::gil_scoped_acquire pythonLock;
-			callback(viewID, row, column, results);
+			callback(viewID, row, column, std::move(results));
 		}
 		catch (const std::exception& err)
 		{
@@ -206,15 +215,24 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 
 void Session::reparse(const int viewID, pybind11::object reparseCallback)
 {
-	pybind11::gil_scoped_release releaser;
-	bool success = !mUnit->Reparse(mPchOps);
-	pybind11::gil_scoped_acquire pythonLock;
-	if (reparseCallback == pybind11::object()) return;
-	else reparseCallback(viewID, success);
+	if (reparseCallback.is_none())
+	{
+		return;
+	}
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+	bool success;
+	// enter scope
+	{
+		pybind11::gil_scoped_release releaser;
+		success = !mUnit->Reparse(mPchOps);
+	}
+	reparseCallback(viewID, success);
 }
 
 void Session::save() const
 {
+	std::lock_guard<std::mutex> methodLock(mMethodMutex);
+	pybind11::gil_scoped_release releaser;
 	mUnit->Save(mOptions.astFile);
 }
 
@@ -226,12 +244,7 @@ const std::string& Session::getFilename() const noexcept
 void Session::report(const char* message) const
 {
 	pybind11::gil_scoped_acquire lock;
-	if (message != nullptr && mOptions.logCallback != pybind11::object())
-	{
-		// yeah this is horrible.
-		// but Python has no concept of const,
-		// so it somehow works fine.
-		const_cast<Session*>(this)->mOptions.logCallback(message);
-	}
+	if (mOptions.logCallback.is_none()) return;
+	const_cast<Session*>(this)->mOptions.logCallback(message);
 }
 

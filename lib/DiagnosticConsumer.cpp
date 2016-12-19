@@ -8,7 +8,7 @@ namespace Clara {
 DiagnosticConsumer::DiagnosticConsumer(pybind11::object callback)
 : mCallback(std::move(callback))
 {
-	
+	/* Empty on purpose. */
 }
 
 void DiagnosticConsumer::BeginSourceFile(const clang::LangOptions &options, const clang::Preprocessor* pp)
@@ -64,31 +64,29 @@ clang::PresumedLoc DiagnosticConsumer::makePresumedLoc(const clang::Diagnostic& 
 	}
 }
 
-void DiagnosticConsumer::doCallback(const char* messageType, const clang::PresumedLoc& presumedLoc, const char* message)
+void DiagnosticConsumer::doCallback(const char* severity, const clang::PresumedLoc& presumedLoc, const char* message)
 {
 	if (presumedLoc.isValid())
 	{
-		doCallback(presumedLoc.getFilename(), messageType, presumedLoc.getLine(), presumedLoc.getColumn(), message);
+		doCallback(presumedLoc.getFilename(), severity, presumedLoc.getLine(), presumedLoc.getColumn(), message);
 	}
 	else
 	{
-		doCallback("", messageType, -1, -1, message);
+		doCallback("", severity, -1, -1, message);
 	}
 }
 
-void DiagnosticConsumer::doCallback(const char* filename, const char* messageType, int row, int column, const char* message)
+void DiagnosticConsumer::doCallback(const char* filename, const char* severity, int row, int column, const char* message)
 {
 	pybind11::gil_scoped_acquire pythonLock;
-	if (mCallback != pybind11::object())
+	if (mCallback.is_none()) return;
+	try
 	{
-		try
-		{
-			mCallback(filename, messageType, row, column, message);
-		}
-		catch (const std::exception& err)
-		{
-			// oops... now what?
-		}
+		mCallback(filename, severity, row, column, message);
+	}
+	catch (const std::exception& err)
+	{
+		// oops... now what?
 	}
 }
 

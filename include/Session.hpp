@@ -107,7 +107,7 @@ private:
 	std::unique_ptr<Clara::CodeCompleteConsumer> mCodeCompleteConsumer;
 	std::unique_ptr<clang::ASTUnit> mUnit;
 
-	std::mutex mMethodMutex;
+	mutable std::mutex mMethodMutex;
 };
 
 } // namespace Clara
