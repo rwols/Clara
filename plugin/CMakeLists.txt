@@ -1,16 +1,17 @@
-install(FILES
-	Clara.sublime-commands
-	Clara.sublime-settings
-	ClaraInsertDiagnosis.py
-	CodeCompleteAtCursorCommand.py
-	DiagnoseCommand.py
-	EventListener.py
-	GenerateSystemHeadersCommand.py
-	Main.sublime-menu
-	OpenClaraSettingsCommand.py
-	# ViewEventListener.py
+# install(FILES
+# 	Clara.sublime-commands
+# 	Clara.sublime-settings
+# 	ClaraInsertDiagnosis.py
+# 	CodeCompleteAtCursorCommand.py
+# 	DiagnoseCommand.py
+# 	EventListener.py
+# 	GenerateSystemHeadersCommand.py
+# 	Main.sublime-menu
+# 	OpenClaraSettingsCommand.py
 
-	DESTINATION "${claraInstallFolder}")
+# 	DESTINATION "${claraInstallFolder}")
+
+install(DIRECTORY . DESTINATION "${claraInstallFolder}")
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 

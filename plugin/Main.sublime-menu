@@ -17,6 +17,18 @@
 							{
 								"command": "open_clara_settings",
 								"caption": "Settings"
+							},
+							{
+								"command": "code_complete_at_cursor",
+								"caption": "Code Complete At Cursor"
+							},
+							{
+								"command": "clara_diagnose",
+								"caption": "Diagnose"
+							},
+							{
+								"command": "clara_generate_system_headers",
+								"caption": "Generate System Headers"
 							}
 						]
 					}

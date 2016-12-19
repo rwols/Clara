@@ -38,8 +38,9 @@ class ProgressIndicator():
         The message to display once the thread is complete
     """
 
-    def __init__(self, thread, message, success_message, **kwargs):
+    def __init__(self, thread, status_key, message, success_message, **kwargs):
         self.thread = thread
+        self.status_key = status_key
         self.message = message
         self._success_message = success_message
         self._success_message_lock = threading.RLock()
@@ -62,17 +63,17 @@ class ProgressIndicator():
         active_view = self.window.active_view()
 
         if self.last_view is not None and active_view != self.last_view:
-            self.last_view.erase_status('Clara')
+            self.last_view.erase_status(self.status_key)
             self.last_view = None
 
         if not self.thread.is_alive():
             def cleanup():
-                active_view.erase_status('Clara')
+                active_view.erase_status(self.status_key)
             if hasattr(self.thread, 'result') and not self.thread.result:
                 cleanup()
                 return
             with self._success_message_lock:
-                active_view.set_status('Clara', self.success_message)
+                active_view.set_status(self.status_key, self.success_message)
 
             sublime.set_timeout(cleanup, self.display_message_length)
             return
@@ -81,7 +82,7 @@ class ProgressIndicator():
         after = (self.size - 1) - before
 
         active_view.set_status(
-            'Clara',
+            self.status_key,
             '{0} [{1}={2}]'.format(self.message, ' ' * before, ' ' * after)
         )
         if self.last_view is None:
