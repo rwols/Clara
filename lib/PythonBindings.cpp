@@ -14,6 +14,10 @@ PYBIND11_PLUGIN(Clara)
 
 	module m("Clara", "Clara plugin");
 
+	m.def("claraVersion", [] { return SUBLIME_VERSION; });
+	m.def("claraPlatform", [] { return SUBLIME_PLATFORM; });
+	m.def("claraPythonVersion", [] { return PYTHON_VERSION; });
+
 	class_<CompilationDatabase>(m, "CompilationDatabase")
 		.def(init<const std::string&>())
 		.def("get", &CompilationDatabase::operator[])

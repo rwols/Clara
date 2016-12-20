@@ -75,7 +75,7 @@ int main()
 
     SomeStruct asdf(5);
     asdf.what(asdf, 20.0f);
-    baz(10.0f, 20.0f);
+    baz(10.0f, 20.f);
 
     Color color = red;
     switch (color)

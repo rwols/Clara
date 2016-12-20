@@ -7,21 +7,21 @@ _printer_lock = threading.Lock()
 _loaded_headers_atleast_once = False
 _CLARA_SETTINGS = 'Clara.sublime-settings'
 
-# FIXME: Replace stubs
 def verify_version():
-	return 3126 <= int(sublime.version())
+	if claraVersion() > int(sublime.version()):
+		sublime.error_message('Your Sublime version is too low for Clara. '
+			'It must be at least version {}, while your Sublime version is {}.'
+			.format(claraVersion(), int(sublime.version())))
 
-# FIXME: Replace stubs
 def verify_platform():
-	platform = sublime.platform()
-	return True
+	if claraPlatform() != sublime.platform():
+		sublime.error_message("Clara platform mismatch. "
+			"Sublime's platform is {} while Clara's platform is {}."
+			.format(sublime.platform(), claraPlatform()))
 
-# FIXME: Add error messages
 def plugin_loaded():
-	if not verify_version():
-		sublime.error_message('Clara version mismatch.')
-	if not verify_platform():
-		sublime.error_message('Clara platform mismatch.')
+	verify_version()
+	verify_platform()
 
 def clara_print(message):
 	if sublime.load_settings(_CLARA_SETTINGS).get('debug', True):
@@ -73,6 +73,7 @@ class ViewData(object):
 	"""ViewData"""
 	def __init__(self, view):
 		super(ViewData, self).__init__()
+		assert view
 		self.view = view
 		self.active_diagnostics = sublime.PhantomSet(self.view)
 		self.new_diagnostics = []
@@ -86,17 +87,15 @@ class FileBufferData(object):
 		self.session = None
 		self.session_is_loading = True
 		self.is_reparsing = False
-		self.views = {}
-		# self.views = { initial_view.id(): ViewData(initial_view) }
-		self.views[initial_view.id()] = ViewData(initial_view)
+		self.views = { initial_view.id(): ViewData(initial_view) }
 		self.initial_view = initial_view # FIXME: Make do without this member variable
 		self.point_to_completions = {}
 		self.inflight_completions = set()
 		thread = threading.Thread(target=self._initialize_session)
-		thread.start()
 		basename = os.path.basename(self.file_name)
-		ProgressIndicator(thread, self.file_name, "Parsing {}".format(basename), "Parsed {}".format(basename))
-		# threading.Thread(target=self._initialize_session).start()
+		ProgressIndicator(thread, self.file_name, 
+			"Parsing {}".format(basename), "Parsed {}".format(basename))
+		thread.start()
 
 	def add_view(self, new_view):
 		if not self.has_view(new_view):
@@ -171,7 +170,8 @@ class FileBufferData(object):
 				self.inflight_completions.add(point)
 				row, col = sublime_point_to_clang_rowcol(view, point)
 				unsaved_buffer = view.substr(sublime.Region(0, point))
-				self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, col, self._completion_callback)
+				self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, 
+					col, self._completion_callback)
 
 	def _diagnostic_callback(self, file_name, severity, row, column, message):
 		diag_message = "{}: {}:{}:{}: {}".format(
@@ -257,13 +257,12 @@ class FileBufferData(object):
 		clara_print('adding point {}'.format(point))
 		if len(completions) == 0:
 			completions = 'FOUND NOTHING'
-		else:
-			self.point_to_completions[point] = completions
-			view.run_command('hide_auto_complete')
-			view.run_command('auto_complete', {
-				'disable_auto_insert': True,
-				'api_completions_only': False,
-				'next_competion_if_showing': True})
+		self.point_to_completions[point] = completions
+		view.run_command('hide_auto_complete')
+		view.run_command('auto_complete', {
+			'disable_auto_insert': True,
+			'api_completions_only': False,
+			'next_competion_if_showing': True})
 
 	def _load_headers(self, key):
 		settings = sublime.load_settings(_CLARA_SETTINGS)
@@ -285,7 +284,11 @@ class FileBufferData(object):
 			return None
 
 	def _initialize_session(self):
-		if not is_implementation_file(self.file_name):
+		if is_header_file(self.file_name):
+			# Not yet supported.
+			clara_print('Received header file, but that is not yet supported.')
+			return
+		elif not is_implementation_file(self.file_name):
 			# The file doesn't have the correct extension, so forget about it.
 			return
 		compdb = EventListener.get_compilation_database_for_view(
@@ -357,23 +360,11 @@ class FileBufferData(object):
 		self.is_reparsing = True
 		if not self.session.reparse():
 			clara_print('Error occured during parsing of "{}"! This session will be disabled.'.format(self.file_name))
+			self.is_reparsing = False
 			self.session = None
 			self.session_is_loading = True
 		self.is_reparsing = False
 		clara_print('Reparsed "{}"'.format(self.file_name))
-		
-
-	def _reparse_callback(self, view_id, success):
-		self.is_reparsing = False
-		self.erase_status()
-		if success:
-			clara_print('Reparsed "{}"'.format(self.file_name))
-		else:
-			clara_print('Error occured while reparsing "{}"'
-				.format(self.file_name))
-			self.session = None
-			self.session_is_loading = True
-
 
 class EventListener(sublime_plugin.EventListener):
 
@@ -399,26 +390,21 @@ class EventListener(sublime_plugin.EventListener):
 		clara_print('initialized EventListener')
 
 	def on_new(self, view):
-		clara_print('on_new: {}, {}'.format(view.id(), view.file_name()))
 		if EventListener._ensure_compilation_database_exists_for_view(view):
 			if not self._ensure_view_is_loaded(view):
 				clara_print('Did not load {}, {}'
 					.format(view.id(), view.file_name()))
 
 	def on_clone(self, view):
-		# clara_print('on_clone: {}, {}'.format(view.id(), view.file_name()))
 		self.on_new(view)
 
 	def on_load(self, view):
-		# clara_print('on_load: {}, {}'.format(view.id(), view.file_name()))
 		self.on_new(view)
 
 	def on_activated(self, view):
-		# clara_print('on_activated: {}, {}'.format(view.id(), view.file_name()))
 		self.on_new(view)
 
 	def on_close(self, view):
-		# clara_print('on_close: {}, {}'.format(view.id(), view.file_name()))
 		self._remove_view_from_file_buffers(view)
 
 	def on_post_save(self, view):
