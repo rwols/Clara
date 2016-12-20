@@ -1,9 +1,60 @@
 {
+	// If there seems to be a problem, try to first run the command
+	// "Clara: Diagnose" from the command palette and see if there are any
+	// problems there. If you change any of the settings in your User settings,
+	// be sure to restart Sublime Text 3.
+	
+	// Enable or disable auto-completion in header files.
+	"code_complete_in_header_files": true,
+
+	// Enable or disable saving the translation unit as an "abstract syntax
+	// tree" to a file on disk. The location of the cached file is as follows.
+	// Take the directory of the output file for compilation, then append the
+	// hidden folder ".clara" to it, then take the filename with the extension
+	// ".ast" appended to it. Reloading a cached translation unit is a lot
+	// faster than reparsing the translation unit from scratch.
+	"cache_translation_unit_on_save": true,
+
+	// Wether to include macros in auto-complete suggestions.
 	"include_macros": true,
+
+	// Wether to include "code patterns" in auto-complete suggestions.
 	"include_code_patterns": true,
+
+	// Wether to include global variables in auto-complete suggestions.
 	"include_globals": true,
+
+	// Wether to include brief documentation in auto-complete suggestions. The
+	// documentation must be written in the Doxygen syntax in order to be picked
+	// up. The brief comments are displayed in the auto-completion panel to the
+	// right of the declaration after a colon.
 	"include_brief_comments": true,
+
+	// Wether to include optional arguments of functions and methods in
+	// auto-complet suggestions.
 	"include_optional_arguments": true,
-	"cpp_dialect_if_not_defined_in_cmakelists_file": "14",
-	"debug": true
+
+	// If "debug" is true, then debug prints are written to the Python console.
+	// If "debug" is false, no output is written to the Python console. The
+	// status bar messages in the status bar are present irregardless.
+	"debug": true,
+
+	// The directory of the "built-in" headers. These are included by this
+	// plugin, and they reside in the folder ${packages_path}/Clara/include.
+	// You don't have to fill this value manually, just call the command
+	// "Clara: Generate System Headers" from the command palette.
+	"builtin_headers": "",
+
+	// A list of directories where system headers reside. These are not
+	// included by this plugin, but if you have clang or gcc installed, they are
+	// guaranteed to exist somewhere. You don't have to fill this value 
+	// manually, just call the command "Clara: Generate System Headers" from the
+	// command palette.
+	"system_headers": [],
+
+	// If applicable, a list of directories where system frameworks reside.
+	// These are not included by this plugin. You don't have to fill this value
+	// manually, just call the command "Clara: Generate System Headers" from the
+	// command palette.
+	"system_frameworks": []
 }

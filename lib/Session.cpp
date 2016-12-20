@@ -122,24 +122,35 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 		headerSearchOpts.Verbose = false;
 	#endif
 
-	headerSearchOpts.UseBuiltinIncludes = true;
+	headerSearchOpts.UseBuiltinIncludes = false;
 	headerSearchOpts.UseStandardSystemIncludes = true;
 	headerSearchOpts.UseStandardCXXIncludes = true;
 
 	// The resourcedir is hardcoded into the library now...
 	// Don't see any other way on how to solve this.
-	headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
-
-	headerSearchOpts.AddPath(mOptions.builtinHeaders, clang::frontend::System, false, false);
-
+	// headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
+	
+	addPath(invocation, mOptions.builtinHeaders, false);
 	for (const auto& systemHeader : mOptions.systemHeaders)
 	{
-		headerSearchOpts.AddPath(systemHeader, clang::frontend::System, false, false);
+		addPath(invocation, systemHeader, false);
 	}
 	for (const auto& framework : mOptions.frameworks)
 	{
-		headerSearchOpts.AddPath(framework, clang::frontend::System, true, false);
+		addPath(invocation, framework, true);
 	}
+}
+
+void Session::addPath(clang::CompilerInvocation* invocation, 
+	const std::string& path, bool isFramework) const
+{
+	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
+	std::string message("Adding system include path \"");
+	message.append(path);
+	message.append("\".");
+	report(message.c_str());
+	headerSearchOpts.AddPath(path, clang::frontend::System, isFramework, 
+		/*ignoreSysRoot=*/ false);
 }
 
 void Session::resetDiagnosticsEngine()

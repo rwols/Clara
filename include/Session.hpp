@@ -91,6 +91,7 @@ private:
 	void loadFromOptions(clang::CompilerInstance& instance) const;
 	clang::CompilerInvocation* makeInvocation() const;
 	void dump();
+	void addPath(clang::CompilerInvocation* invocation, const std::string& systemPath, bool isFramework) const;
 	std::vector<std::pair<std::string, std::string>> codeCompleteImpl(const char*, int, int);
 	void codeCompletePrepare(clang::CompilerInstance& instance, const char* unsavedBuffer, int row, int column) const;
 	void fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* invocation) const;

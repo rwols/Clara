@@ -9,6 +9,7 @@ class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 		SHELL_CMD2 = "clang++ -E -x c++ - -v < /dev/null 2>&1 | awk 'BEGIN{FS=\"-resource-dir\"} /-resource-dir/ {print $2}' | awk '{print $1;}'"
 		USER_MSG = 'System headers have been saved in user settings. Do you want to view them now?'
 		SETTINGS = 'Clara.sublime-settings'
+		ENDS_WITH_FRAMEWORK = ' (framework directory)'
 
 		output = subprocess.check_output(SHELL_CMD1, shell=True)
 		output = output.decode('utf-8')
@@ -17,8 +18,8 @@ class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 		headers = []
 		for rawHeader in rawHeaders:
 			rawHeader = rawHeader.strip()
-			if rawHeader.endswith(' (framework directory)'):
-				rawHeader = rawHeader[:-len(' (framework directory)')]
+			if rawHeader.endswith(ENDS_WITH_FRAMEWORK):
+				rawHeader = rawHeader[:-len(ENDS_WITH_FRAMEWORK)]
 				frameworks.append(os.path.abspath(rawHeader))
 			else:
 				headers.append(os.path.abspath(rawHeader))
