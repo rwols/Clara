@@ -22,10 +22,10 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 	mResultList.clear();
     mResultList.reserve(numResults);
 
-	std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
-	{
-		return lhs.Priority < rhs.Priority;
-	});
+	// std::stable_sort(results, results + numResults, [](const auto& lhs, const auto& rhs) 
+	// {
+	// 	return lhs.Priority < rhs.Priority;
+	// });
 
 	for (unsigned i = 0; i < numResults; ++i) 
 	{
