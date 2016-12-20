@@ -14,13 +14,8 @@ endif()
 
 # We need to have an exact version match for Sublime Text otherwise Python will
 # complain about threads not being initialized.
-set(PYBIND11_PYTHON_VERSION 3.3)
+set(PYBIND11_PYTHON_VERSION 3.3 CACHE STRING "")
 set(PYTHON_EXECUTABLE python${PYBIND11_PYTHON_VERSION})
-
-# Override this variable in the cache so that the resource directory is found.
-# We're doing an absolute path because plugins are run from the plugin_host
-# executable. That executable resides in a folder unrelated to the usual
-# /usr/local/lib, so we just write an absolute path.
 
 add_subdirectory(pybind11)
 
