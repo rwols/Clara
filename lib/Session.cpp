@@ -248,6 +248,13 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 					default:
 						break;
 				}
+				std::string reportMsg("Calling diagnostic callback with parameters ");
+				reportMsg.append(severity);
+				reportMsg.append(", ").append(filename);
+				reportMsg.append(", ").append(std::to_string(row));
+				reportMsg.append(", ").append(std::to_string(col));
+				reportMsg.append(", ").append(msg);
+				report(reportMsg.c_str());
 				mOptions.diagnosticCallback(severity, filename, row, col, msg);
 			}
 		}
