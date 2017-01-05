@@ -14,7 +14,7 @@ endif()
 
 # We need to have an exact version match for Sublime Text otherwise Python will
 # complain about threads not being initialized.
-set(PYBIND11_PYTHON_VERSION 3.3 CACHE STRING "")
+set(PYBIND11_PYTHON_VERSION 3.3)
 set(PYTHON_EXECUTABLE python${PYBIND11_PYTHON_VERSION})
 
 add_subdirectory(pybind11)
