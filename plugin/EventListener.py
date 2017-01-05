@@ -45,7 +45,6 @@ def sublime_point_to_clang_rowcol(view, point):
 	return (row + 1, col + 1)
 
 def clang_rowcol_to_sublime_point(view, row, col):
-	frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 	return view.text_point(row - 1, col - 1)
 
 def replace_single_quotes_by_tag(message, tag):
@@ -178,12 +177,8 @@ class FileBufferData(object):
 			severity, file_name, str(row), str(column), message)
 		clara_print(diag_message)
 		if file_name != '' and file_name != self.file_name:
-			frameinfo = getframeinfo(currentframe())
-			print(frameinfo.filename, frameinfo.lineno)
 			return
-		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 		div_class = None
-		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 		if severity == 'begin':
 			# clara_print('BEGIN DIAGNOSIS'.format(file_name))
 			view_data.new_diagnostics = []
@@ -205,43 +200,26 @@ class FileBufferData(object):
 			div_class = 'inserted'
 		else:
 			div_class = 'inserted'
-		frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 		for view_id, view_data in self.views.items():
 			point = 0
 			layout = 0
 			print(view_data.view.name(), view_data.view.file_name())
 			if row != -1 or column != -1:
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				assert view_data
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				assert view_data.view
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				assert isinstance(view_data.view, sublime.View)
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				point = view_data.view.text_point(row - 1, col - 1)
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				print('point: {}'.format(point))
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				point = max(0, point - 2)
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				layout = sublime.LAYOUT_BELOW
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			else:
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 				layout = sublime.LAYOUT_BLOCK
-				frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			region = sublime.Region(point, point)
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			message = replace_single_quotes_by_tag(message, 'b')
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(div_class, message)
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			phantom = sublime.Phantom(region, message, layout)
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			view_data.new_diagnostics.append(phantom)
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 			view_data.active_diagnostics.update(view_data.new_diagnostics)
-			frameinfo = getframeinfo(currentframe()); print(frameinfo.filename, frameinfo.lineno)
 
 	def _completion_callback(self, view_id, row, col, completions):
 		view = self.views[view_id].view

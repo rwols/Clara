@@ -46,7 +46,7 @@ Session::Session(const SessionOptions& options)
 		mDiags, 
 		mFileMgr.get(),
 		/*OnlyLocalDecls*/ false, 
-		/*CaptureDiagnostics*/ false,
+		/*CaptureDiagnostics*/ true,
 		/*PrecompilePreambleAfterNParses*/ 2,
 		/*TranslationUnitKind*/ clang::TU_Complete, 
 		/*CacheCodeCompletionResults*/ true,
@@ -56,8 +56,6 @@ Session::Session(const SessionOptions& options)
 	{
 		throw std::runtime_error("Failed to parse AST!");
 	}
-
-	std::string resourceDirMessage("Resource directory is ");
 }
 
 clang::CompilerInvocation* Session::createInvocationFromOptions()
@@ -219,6 +217,39 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 		{
 			pybind11::gil_scoped_acquire pythonLock;
 			callback(viewID, row, column, std::move(results));
+			for (const auto& storedDiagnostic : mStoredDiags)
+			{
+				bool invalid = false;
+				const auto row = storedDiagnostic.getLocation().getSpellingLineNumber(&invalid);
+				if (invalid) continue;
+				const auto col = storedDiagnostic.getLocation().getSpellingColumnNumber(&invalid);
+				if (invalid) continue;
+				const auto msg = storedDiagnostic.getMessage().str();
+				const auto filename = mSourceMgr->getFilename(storedDiagnostic.getLocation()).str();
+				const auto level = storedDiagnostic.getLevel();
+				const char* severity = nullptr;
+				switch (level)
+				{
+					case clang::DiagnosticsEngine::Note:
+						severity = "note";
+						break;
+					case clang::DiagnosticsEngine::Remark:
+						severity = "remark";
+						break;
+					case clang::DiagnosticsEngine::Warning:
+						severity = "warning";
+						break;
+					case clang::DiagnosticsEngine::Error:
+						severity = "error";
+						break;
+					case clang::DiagnosticsEngine::Fatal:
+						severity = "fatal";
+						break;
+					default:
+						break;
+				}
+				mOptions.diagnosticCallback(severity, filename, row, col, msg);
+			}
 		}
 		catch (const std::exception& err)
 		{
