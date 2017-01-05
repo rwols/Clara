@@ -46,7 +46,7 @@ Session::Session(const SessionOptions& options)
 		mDiags, 
 		mFileMgr.get(),
 		/*OnlyLocalDecls*/ false, 
-		/*CaptureDiagnostics*/ true,
+		/*CaptureDiagnostics*/ false,
 		/*PrecompilePreambleAfterNParses*/ 2,
 		/*TranslationUnitKind*/ clang::TU_Complete, 
 		/*CacheCodeCompletionResults*/ true,
@@ -123,10 +123,6 @@ void Session::fillInvocationWithStandardHeaderPaths(clang::CompilerInvocation* i
 	headerSearchOpts.UseBuiltinIncludes = false;
 	headerSearchOpts.UseStandardSystemIncludes = true;
 	headerSearchOpts.UseStandardCXXIncludes = true;
-
-	// The resourcedir is hardcoded into the library now...
-	// Don't see any other way on how to solve this.
-	// headerSearchOpts.ResourceDir = mOptions.builtinHeaders;
 	
 	addPath(invocation, mOptions.builtinHeaders, false);
 	for (const auto& systemHeader : mOptions.systemHeaders)
@@ -179,8 +175,7 @@ std::vector<std::pair<std::string, std::string>> Session::codeCompleteImpl(const
 	LangOptions langOpts = mUnit->getLangOpts();
 
 	// mDiags = new DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false);
-	mDiags->Reset();
-	mStoredDiags.clear();
+	// mDiags->Reset();
 	IntrusiveRefCntPtr<SourceManager> sourceManager(new SourceManager(*mDiags, *mFileMgr));
 	mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles, 
 		mOptions.codeCompleteIncludeMacros, mOptions.codeCompleteIncludeCodePatterns, 
@@ -217,45 +212,12 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer, int
 		{
 			pybind11::gil_scoped_acquire pythonLock;
 			callback(viewID, row, column, std::move(results));
-			for (const auto& storedDiagnostic : mStoredDiags)
+			std::string reportMsg("There are ");
+			reportMsg.append(std::to_string(mUnit->stored_diag_size())).append(" diags.");
+			report(reportMsg.c_str());
+			for (auto iter = mUnit->stored_diag_begin(); iter != mUnit->stored_diag_end(); ++iter)
 			{
-				bool invalid = false;
-				const auto row = storedDiagnostic.getLocation().getSpellingLineNumber(&invalid);
-				if (invalid) continue;
-				const auto col = storedDiagnostic.getLocation().getSpellingColumnNumber(&invalid);
-				if (invalid) continue;
-				const auto msg = storedDiagnostic.getMessage().str();
-				const auto filename = mSourceMgr->getFilename(storedDiagnostic.getLocation()).str();
-				const auto level = storedDiagnostic.getLevel();
-				const char* severity = nullptr;
-				switch (level)
-				{
-					case clang::DiagnosticsEngine::Note:
-						severity = "note";
-						break;
-					case clang::DiagnosticsEngine::Remark:
-						severity = "remark";
-						break;
-					case clang::DiagnosticsEngine::Warning:
-						severity = "warning";
-						break;
-					case clang::DiagnosticsEngine::Error:
-						severity = "error";
-						break;
-					case clang::DiagnosticsEngine::Fatal:
-						severity = "fatal";
-						break;
-					default:
-						break;
-				}
-				std::string reportMsg("Calling diagnostic callback with parameters ");
-				reportMsg.append(severity);
-				reportMsg.append(", ").append(filename);
-				reportMsg.append(", ").append(std::to_string(row));
-				reportMsg.append(", ").append(std::to_string(col));
-				reportMsg.append(", ").append(msg);
-				report(reportMsg.c_str());
-				mOptions.diagnosticCallback(severity, filename, row, col, msg);
+				report(iter->getMessage().str().c_str());
 			}
 		}
 		catch (const std::exception& err)
@@ -295,4 +257,3 @@ void Session::report(const char* message) const
 	if (mOptions.logCallback.is_none()) return;
 	const_cast<Session*>(this)->mOptions.logCallback(message);
 }
-
