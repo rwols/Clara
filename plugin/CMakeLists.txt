@@ -1,4 +1,6 @@
-install(DIRECTORY . DESTINATION "${claraInstallFolder}")
+install(DIRECTORY . 
+	DESTINATION "${claraInstallFolder}"
+	PATTERN CMakeLists.txt EXCLUDE)
 
 add_custom_target(ClaraPlugin
 	${CMAKE_COMMAND} 

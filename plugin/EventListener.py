@@ -272,7 +272,8 @@ class FileBufferData(object):
 		compdb = EventListener.get_compilation_database_for_view(
 			self.initial_view)
 		if not compdb:
-			# Not even going to try.
+			self.set_status('[!!!] This file has no compilation database [!!!]')
+			sublime.set_timeout_async(self.erase_status, 10000)
 			return
 
 		# Start constructing the SessionOptions object in order to construct a
