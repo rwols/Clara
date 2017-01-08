@@ -8,39 +8,73 @@
 
 using namespace Clara;
 
+const char* Session::ASTFileReadError::what() const noexcept
+{
+	return "ASTFileReadError";
+}
+
+const char* Session::ASTParseError::what() const noexcept
+{
+	return "ASTParseError";
+}
+
 Session::Session(const SessionOptions& options)
 : mOptions(options)
 , mDiagOpts(new clang::DiagnosticOptions())
 , mDiagConsumer(mOptions.diagnosticCallback)
-, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), &mDiagConsumer, false))
+, mDiags(new clang::DiagnosticsEngine(&mDiagIds, mDiagOpts.get(), 
+	&mDiagConsumer, false))
 {
 	using namespace clang;
+
 	std::lock_guard<std::mutex> methodLock(mMethodMutex);
 	pybind11::gil_scoped_release releaser;
+	
 	mFileOpts.WorkingDir = mOptions.workingDirectory;
 	mFileMgr = new FileManager(mFileOpts);
 
+	// TODO: Uncomment these lines someday...
 	// llvm::sys::fs::file_status astStatus, fileStatus;
 	// llvm::sys::fs::status(mOptions.filename, fileStatus);
 	// llvm::sys::fs::status(mOptions.astFile, astStatus);
 	// if (llvm::sys::fs::exists(astStatus))
 	// {
-	// 	if (astStatus.getLastModificationTime() >= fileStatus.getLastModificationTime())
+	// 	const auto astFileLastModTime = astStatus.getLastModificationTime();
+	// 	const auto srcFileLastModTime = fileStatus.getLastModificationTime();
+	// 	if (srcFileLastModTime <= astFileLastModTime)
 	// 	{
+	// 		// TODO: For each include file, check wether those includes are also
+	// 		// up to date.
 	// 		std::string message("Reading \"");
 	// 		message.append(mOptions.astFile);
 	// 		message.append("\".");
 	// 		report(message.c_str());
-	// 		mUnit = clang::ASTUnit::LoadFromASTFile(
-	// 			mOptions.astFile, mPchOps->getRawReader(), mDiags, 
-	// 			mFileOpts, true, false, llvm::None, false, true, true);
+	// 		mUnit = ASTUnit::LoadFromASTFile(
+	// 			mOptions.astFile, 
+	// 			mPchOps->getRawReader(), 
+	// 			mDiags, 
+	// 			mFileOpts,
+	// 			/*UseDebugInfo*/ false, 
+	// 			/*OnlyLocalDecls*/ false,
+	// 			/*RemappedFiles*/ llvm::None,
+	// 			/*CaptureDiagnostics*/ false,
+	// 			/*AllowPCHWithCompilerErrors*/ true,
+	// 			/*UserFilesAreVolatile*/ true);
+	// 		if (mUnit)
+	// 		{
+	// 			report("Succesfully parsed existing AST file.");
+	// 			return;
+	// 		}
+	// 		else
+	// 		{
+	// 			report("Failed to parse existing AST file. Throwing exception...");
+	// 			throw ASTFileReadError();
+	// 		}
 	// 	}
 	// }
 
-	// if (mUnit) return;
-
-	clang::IntrusiveRefCntPtr<clang::CompilerInvocation> invocation(createInvocationFromOptions());
-	mUnit = clang::ASTUnit::LoadFromCompilerInvocation(
+	IntrusiveRefCntPtr<CompilerInvocation> invocation(createInvocationFromOptions());
+	mUnit = ASTUnit::LoadFromCompilerInvocation(
 		invocation.get(), 
 		mPchOps, 
 		mDiags, 
@@ -52,9 +86,13 @@ Session::Session(const SessionOptions& options)
 		/*CacheCodeCompletionResults*/ true,
 		/*IncludeBriefCommentsInCodeCompletion*/ mOptions.codeCompleteIncludeBriefComments, 
 		/*UserFilesAreVolatile*/ true);
+	if (!mUnit)
+	{
+		throw ASTParseError();
+	}
 	if (mUnit->Reparse(mPchOps))
 	{
-		throw std::runtime_error("Failed to parse AST!");
+		throw ASTParseError();
 	}
 }
 

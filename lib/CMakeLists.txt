@@ -7,7 +7,41 @@ set(LLVM_REQUIRES_EH ON CACHE INTERNAL "Enable Exception handling")
 set(CLANG_RESOURCE_DIR ${CMAKE_INSTALL_PREFIX}/lib CACHE INTERNAL
   "Relative directory from the Clang binary to its resource files.")
 
-set(LLVM_LINK_COMPONENTS Core Support)
+set(LLVM_LINK_COMPONENTS 
+	X86Disassembler 
+	X86AsmParser 
+	X86CodeGen 
+	X86Desc 
+	Object 
+	X86Info 
+	X86AsmPrinter 
+	X86Utils 
+	SelectionDAG 
+	AsmPrinter 
+	CodeGen 
+	MCDisassembler  
+	ObjCARCOpts 
+	MCParser 
+	Linker 
+	ipo 
+	Vectorize 
+	ScalarOpts 
+	InstCombine 
+	TransformUtils 
+	Analysis 
+	Target 
+	MC 
+	BitWriter 
+	BitReader 
+	Core 
+	Support
+	)
+
+set(CLANG_LIBS
+	clangFrontend
+	clangTooling
+	)
+
 if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -28,7 +62,12 @@ set(source_files
 	SessionOptions.cpp)
 
 pybind11_add_module(Clara ${source_files})
-target_link_libraries(Clara LINK_PRIVATE clangFrontend clangTooling)
+
+foreach(comp ${LLVM_LINK_COMPONENTS})
+	list(APPEND comps LLVM${comp})
+endforeach(comp)
+
+target_link_libraries(Clara LINK_PRIVATE ${CLANG_LIBS} ${comps})
 
 file(GLOB_RECURSE builtin_headers ../../../lib/Headers/*.h)
 install(FILES ${builtin_headers}

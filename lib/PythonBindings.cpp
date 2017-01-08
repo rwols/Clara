@@ -4,6 +4,10 @@
 #include "SessionOptions.hpp"
 #include "CompilationDatabase.hpp"
 
+#include <llvm/Support/Path.h>
+#include <llvm/Support/Signals.h>
+#include <llvm/Support/TargetSelect.h>
+
 // #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -17,6 +21,19 @@ PYBIND11_PLUGIN(Clara)
 	m.def("claraVersion", [] { return SUBLIME_VERSION; });
 	m.def("claraPlatform", [] { return SUBLIME_PLATFORM; });
 	m.def("claraPythonVersion", [] { return PYTHON_VERSION; });
+	m.def("claraInitialize", [] 
+	{
+		static bool notInitialized = true;
+		gil_scoped_release releaser;
+		if (notInitialized)
+		{
+			llvm::InitializeAllTargets();
+			llvm::InitializeAllTargetMCs();
+			llvm::InitializeAllAsmPrinters();
+			llvm::InitializeAllAsmParsers();
+			notInitialized = false;
+		}
+	});
 
 	class_<CompilationDatabase>(m, "CompilationDatabase")
 		.def(init<const std::string&>())
@@ -41,6 +58,9 @@ PYBIND11_PLUGIN(Clara)
 		.def_readwrite("codeCompleteIncludeGlobals",       &SessionOptions::codeCompleteIncludeGlobals)
 		.def_readwrite("codeCompleteIncludeBriefComments", &SessionOptions::codeCompleteIncludeBriefComments)
 	;
+
+	register_exception<Session::ASTFileReadError>(m, "ASTFileReadError");
+	register_exception<Session::ASTParseError>(m, "ASTParseError");
 
 	class_<Session>(m, "Session")
 		.def(init<const SessionOptions&>())

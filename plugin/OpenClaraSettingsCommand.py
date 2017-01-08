@@ -5,7 +5,8 @@ USER_SETTINGS = { "file": "${packages}/User/Clara.sublime-settings" }
 DEFAULT_SETTINGS = { "file": "${packages}/Clara/Clara.sublime-settings" }
 
 class OpenClaraSettingsCommand(sublime_plugin.ApplicationCommand):
-	"""Opens a new window with the default settings on the left and the user settings on the right."""
+	"""Opens a new window with the default settings on the left and the user 
+	settings on the right."""
 
 	def run(self):
 		sublime.run_command('new_window')

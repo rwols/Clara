@@ -42,5 +42,7 @@ int main()
 
     asdf.another = 2.0f;
 
+    asdf.another;
+
     return 0;
 }

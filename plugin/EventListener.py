@@ -22,6 +22,7 @@ def verify_platform():
 def plugin_loaded():
 	verify_version()
 	verify_platform()
+	claraInitialize()
 
 def clara_print(message):
 	if sublime.load_settings(_CLARA_SETTINGS).get('debug', True):
@@ -87,7 +88,8 @@ class FileBufferData(object):
 		self.session_is_loading = True
 		self.is_reparsing = False
 		self.views = { initial_view.id(): ViewData(initial_view) }
-		self.initial_view = initial_view # FIXME: Make do without this member variable
+		# FIXME: Make do without the below member variable.
+		self.initial_view = initial_view 
 		self.point_to_completions = {}
 		self.inflight_completions = set()
 		thread = threading.Thread(target=self._initialize_session)
@@ -106,11 +108,11 @@ class FileBufferData(object):
 	def remove_view(self, view):
 		self.views.pop(view.id(), None)
 		# FIXME: Loading an ASTUnit via an AST file results in assertion failures.
-		# if not self.views:
-		# 	try:
-		# 		self.session.save()
-		# 	except Exception as e:
-		# 		pass
+		if not self.views:
+			try:
+				self.session.save()
+			except Exception as e:
+				pass
 
 	def set_status(self, message):
 		for view_id, view_data in self.views.items():
@@ -329,10 +331,19 @@ class FileBufferData(object):
 		options.codeCompleteIncludeBriefComments = settings.get(
 			'include_brief_comments', True)
 
-		self.session = Session(options)
-		self.session_is_loading = False # Success
-		clara_print('Loaded "{}"'.format(self.file_name))
-		# self.erase_status()
+		try: # Things may go wrong here.
+			self.session = Session(options)
+			self.session_is_loading = False # Success
+			clara_print('Loaded "{}".'.format(self.file_name))
+		except ASTFileReadError as e:
+			clara_print(str(e))
+			# Remove the cached file and try again.
+			os.remove(options.astFile)
+			self.session = Session(options)
+			self.session_is_loading = False # Success
+			clara_print('Loaded "{}".'.format(self.file_name))
+		except ASTParseError as e:
+			clara_print(str(e))
 
 	def _reparse(self):
 		clara_print('Reparsing "{}"'.format(self.file_name))

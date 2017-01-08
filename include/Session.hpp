@@ -20,6 +20,20 @@ class Session
 {
 public:
 
+	class ASTFileReadError : public std::exception
+	{
+	public:
+		~ASTFileReadError() noexcept override = default;
+		const char* what() const noexcept override;
+	};
+
+	class ASTParseError : public std::exception
+	{
+	public:
+		~ASTParseError() noexcept override = default;
+		const char* what() const noexcept override;
+	};
+
 	/**
 	 * @brief      Constructs a new session.
 	 *
