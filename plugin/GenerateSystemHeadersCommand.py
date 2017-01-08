@@ -35,7 +35,7 @@ class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 		settings.set('system_frameworks', frameworks)
 		sublime.save_settings(SETTINGS)
 		if sublime.ok_cancel_dialog(USER_MSG):
-			sublime.run_command('open_clara_settings')
+			sublime.run_command('clara_open_settings')
 
 	def description(self):
 		return 'Generates system headers.'

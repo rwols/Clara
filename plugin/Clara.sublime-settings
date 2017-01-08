@@ -4,9 +4,11 @@
 	// problems there. If you change any of the settings in your User settings,
 	// be sure to restart Sublime Text 3.
 	
+	// TODO: This option doesn't work yet.
 	// Enable or disable auto-completion in header files.
 	"code_complete_in_header_files": true,
 
+	// TODO: This option doesn't work yet.
 	// Enable or disable saving the translation unit as an "abstract syntax
 	// tree" to a file on disk. The location of the cached file is as follows.
 	// Take the directory of the output file for compilation, then append the
