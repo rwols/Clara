@@ -8,7 +8,6 @@
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetSelect.h>
 
-// #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 PYBIND11_PLUGIN(Clara)
@@ -69,6 +68,12 @@ PYBIND11_PLUGIN(Clara)
 		.def("reparse",           &Session::reparse)
 		.def("filename",          &Session::getFilename)
 		.def("save",              &Session::save)
+		.def("__repr__", [](const Session& session)
+		{
+			std::string result("<Clara.Session object for file \"");
+			result.append(session.getFilename()).append("\">");
+			return result;
+		})
 	;
 
 	return m.ptr();

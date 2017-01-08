@@ -1,11 +1,12 @@
 #pragma once
 
 #include "SessionOptions.hpp"
-#include "CancellableSyntaxOnlyAction.hpp"
 #include "DiagnosticConsumer.hpp"
 #include "CodeCompleteConsumer.hpp"
 
 #include <clang/Frontend/PCHContainerOperations.h>
+#include <clang/Frontend/CompilerInvocation.h>
+#include <clang/Frontend/ASTUnit.h>
 
 #include <thread>
 
