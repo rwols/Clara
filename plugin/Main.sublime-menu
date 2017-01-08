@@ -15,13 +15,9 @@
 						"children": 
 						[
 							{
-								"command": "open_clara_settings",
+								"command": "clara_open_settings",
 								"caption": "Settings"
-							},
-							{
-								"command": "code_complete_at_cursor",
-								"caption": "Code Complete At Cursor"
-							},
+							}
 							{
 								"command": "clara_diagnose",
 								"caption": "Diagnose"

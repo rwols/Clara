@@ -1,6 +1,5 @@
 [
+    { "caption": "Clara: Diagnose", "command": "clara_diagnose" },
 	{ "caption": "Clara: Generate System Headers", "command": "clara_generate_system_headers" },
-	{ "caption": "Clara: Code Complete at Cursor", "command": "code_complete_at_cursor" },
-	{ "caption": "Clara: Diagnose", "command": "clara_diagnose" },
 	{ "caption": "Clara: Create Auto-Complete Triggers", "command": "clara_create_auto_complete_triggers" }
 ]

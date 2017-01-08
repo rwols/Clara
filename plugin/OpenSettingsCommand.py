@@ -4,7 +4,7 @@ LAYOUT = { "cols": [0.0, 0.5, 1.0], "rows": [0.0, 1.0], "cells": [[0,0,1,1],[1,0
 USER_SETTINGS = { "file": "${packages}/User/Clara.sublime-settings" }
 DEFAULT_SETTINGS = { "file": "${packages}/Clara/Clara.sublime-settings" }
 
-class OpenClaraSettingsCommand(sublime_plugin.ApplicationCommand):
+class ClaraOpenSettingsCommand(sublime_plugin.ApplicationCommand):
 	"""Opens a new window with the default settings on the left and the user 
 	settings on the right."""
 
