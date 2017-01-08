@@ -16,7 +16,6 @@ struct SomeStruct
     SomeStruct(float x) : data(static_cast<int>(x)) {}
     SomeStruct(double x) : data(static_cast<int>(x)) {}
 
-
     /**
      * @brief      does whatty things
      *
