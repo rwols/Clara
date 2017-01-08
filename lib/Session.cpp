@@ -177,10 +177,12 @@ void Session::addPath(clang::CompilerInvocation* invocation,
 	const std::string& path, bool isFramework) const
 {
 	auto& headerSearchOpts = invocation->getHeaderSearchOpts();
-	std::string message("Adding system include path \"");
-	message.append(path);
-	message.append("\".");
-	report(message.c_str());
+	#if PRINT_HEADER_SEARCH_PATHS
+		std::string message("Adding system include path \"");
+		message.append(path);
+		message.append("\".");
+		report(message.c_str());
+	#endif // PRINT_HEADER_SEARCH_PATHS
 	headerSearchOpts.AddPath(path, clang::frontend::System, isFramework, 
 		/*ignoreSysRoot=*/ false);
 }
