@@ -8,7 +8,7 @@
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/PCHContainerOperations.h>
 
-#include <thread>
+#include <mutex>
 
 namespace Clara
 {
@@ -106,7 +106,7 @@ class Session
 
     clang::DiagnosticConsumer *createDiagnosticConsumer() const;
     void loadFromOptions(clang::CompilerInstance &instance) const;
-    clang::CompilerInvocation *makeInvocation() const;
+    std::unique_ptr<clang::CompilerInvocation> makeInvocation() const;
     void dump();
     void addPath(clang::CompilerInvocation *invocation,
                  const std::string &systemPath, bool isFramework) const;

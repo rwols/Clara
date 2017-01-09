@@ -6,10 +6,12 @@
 namespace Clara
 {
 
+static std::shared_ptr<clang::GlobalCodeCompletionAllocator>
+    gCodeCompleteAlloc(new clang::GlobalCodeCompletionAllocator());
+
 CodeCompleteConsumer::CodeCompleteConsumer(
     const clang::CodeCompleteOptions &options)
-    : clang::CodeCompleteConsumer(options, false),
-      mCCTUInfo(new clang::GlobalCodeCompletionAllocator)
+    : clang::CodeCompleteConsumer(options, false), mCCTUInfo(gCodeCompleteAlloc)
 {
     /* empty */
 }
@@ -27,7 +29,7 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
     // std::stable_sort(results, results + numResults, [](const auto& lhs, const
     // auto& rhs)
     // {
-    // 	return lhs.Priority < rhs.Priority;
+    //  return lhs.Priority < rhs.Priority;
     // });
 
     for (unsigned i = 0; i < numResults; ++i)

@@ -20,7 +20,7 @@
 					"shell_cmd": "cmake --build . --target ClaraPlugin"
 				}
 			],
-			"working_dir": "${project_path}/../../../../build"
+			"working_dir": "${project_path}/../../../../build/debug"
 		}
 	],
 	"cmake":
@@ -30,6 +30,7 @@
 		{
 			"LLVM_ENABLE_EH": true,
 			"LLVM_ENABLE_RTTI": true,
+			"LLVM_TARGETS_TO_BUILD": "X86",
 			"CMAKE_BUILD_TYPE": "Debug"
 		},
 		"generator": "Ninja",

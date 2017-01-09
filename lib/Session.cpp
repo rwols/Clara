@@ -2,6 +2,7 @@
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
+#include <thread>
 
 #define SKIP_FUNCTION_BODIES
 // #define PRINT_HEADER_SEARCH_PATHS
@@ -74,10 +75,12 @@ Session::Session(const SessionOptions &options)
     //  }
     // }
 
-    IntrusiveRefCntPtr<CompilerInvocation> invocation(
-        createInvocationFromOptions());
+    auto invocation =
+        std::shared_ptr<CompilerInvocation>(createInvocationFromOptions());
+    // IntrusiveRefCntPtr<CompilerInvocation> invocation(
+    //     createInvocationFromOptions());
     mUnit = ASTUnit::LoadFromCompilerInvocation(
-        invocation.get(), mPchOps, mDiags, mFileMgr.get(),
+        invocation, mPchOps, mDiags, mFileMgr.get(),
         /*OnlyLocalDecls*/ false,
         /*CaptureDiagnostics*/ false,
         /*PrecompilePreambleAfterNParses*/ 2,
@@ -91,7 +94,7 @@ Session::Session(const SessionOptions &options)
         throw ASTParseError();
     }
     if (mUnit->Reparse(mPchOps))
-    {
+    {	
         throw ASTParseError();
     }
 }
@@ -99,7 +102,7 @@ Session::Session(const SessionOptions &options)
 clang::CompilerInvocation *Session::createInvocationFromOptions()
 {
     using namespace clang;
-    CompilerInvocation *invocation = nullptr;
+    std::unique_ptr<CompilerInvocation> invocation;
     if (!mOptions.invocation.empty())
     {
         std::vector<const char *> commandLine;
@@ -111,21 +114,21 @@ clang::CompilerInvocation *Session::createInvocationFromOptions()
             invocation->getFileSystemOpts().WorkingDir =
                 mOptions.workingDirectory;
             // mFileOpts.WorkingDir = mOptions.workingDirectory;
-            fillInvocationWithStandardHeaderPaths(invocation);
-            return invocation;
+            fillInvocationWithStandardHeaderPaths(invocation.get());
+            return invocation.release();
         }
     }
     else
     {
         invocation = makeInvocation();
     }
-    return invocation;
+    return invocation.release();
 }
 
-clang::CompilerInvocation *Session::makeInvocation() const
+std::unique_ptr<clang::CompilerInvocation> Session::makeInvocation() const
 {
     using namespace clang;
-    auto invocation = new CompilerInvocation();
+    auto invocation = std::make_unique<CompilerInvocation>();
     invocation->TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
     invocation->setLangDefaults(*invocation->getLangOpts(), IK_CXX,
                                 llvm::Triple(invocation->TargetOpts->Triple),
@@ -137,7 +140,7 @@ clang::CompilerInvocation *Session::makeInvocation() const
         getFilename(),
         FrontendOptions::getInputKindForExtension(getFilename()));
 
-    fillInvocationWithStandardHeaderPaths(invocation);
+    fillInvocationWithStandardHeaderPaths(invocation.get());
 
     return invocation;
 }
