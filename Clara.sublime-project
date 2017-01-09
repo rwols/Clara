@@ -35,8 +35,7 @@
 		"generator": "Ninja",
 		"filter_targets":
 		[
-			"Clara",
-			"ClaraInstall"
+			"Clara"
 		],
 		"root_folder": "${project_path}/../../../.."
 	},
@@ -57,6 +56,11 @@
 	],
 	"settings":
 	{
+		"ClangFormat": 
+		{
+			"based_on_style": "File",
+			"format_on_save": true
+		},
 		"flags_sources":
 		{
 			"file": "compile_commands.json", 
