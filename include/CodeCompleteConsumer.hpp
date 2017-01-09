@@ -4,53 +4,55 @@
 #include <clang/Sema/Overload.h>
 #include <string>
 
-namespace Clara {
+namespace Clara
+{
 
 class Session; // forward declaration
 
-class CodeCompleteConsumer : public clang::CodeCompleteConsumer {
-public:
-  bool includeOptionalArguments = true;
+class CodeCompleteConsumer : public clang::CodeCompleteConsumer
+{
+  public:
+    bool includeOptionalArguments = true;
 
-  CodeCompleteConsumer(const clang::CodeCompleteOptions &options);
+    CodeCompleteConsumer(const clang::CodeCompleteOptions &options);
 
-  ~CodeCompleteConsumer() override = default;
+    ~CodeCompleteConsumer() override = default;
 
-  void ProcessCodeCompleteResults(clang::Sema &sema,
-                                  clang::CodeCompletionContext context,
-                                  clang::CodeCompletionResult *results,
-                                  unsigned numResults) override;
+    void ProcessCodeCompleteResults(clang::Sema &sema,
+                                    clang::CodeCompletionContext context,
+                                    clang::CodeCompletionResult *results,
+                                    unsigned numResults) override;
 
-  void ProcessOverloadCandidates(
-      clang::Sema &sema, unsigned currentArg,
-      clang::CodeCompleteConsumer::OverloadCandidate *candidates,
-      unsigned numCandidates) override;
+    void ProcessOverloadCandidates(
+        clang::Sema &sema, unsigned currentArg,
+        clang::CodeCompleteConsumer::OverloadCandidate *candidates,
+        unsigned numCandidates) override;
 
-  clang::CodeCompletionAllocator &getAllocator() override;
+    clang::CodeCompletionAllocator &getAllocator() override;
 
-  clang::CodeCompletionTUInfo &getCodeCompletionTUInfo() override;
+    clang::CodeCompletionTUInfo &getCodeCompletionTUInfo() override;
 
-  void moveResult(std::vector<std::pair<std::string, std::string>> &result);
+    void moveResult(std::vector<std::pair<std::string, std::string>> &result);
 
-  void clearResult();
+    void clearResult();
 
-private:
-  clang::CodeCompletionTUInfo mCCTUInfo;
+  private:
+    clang::CodeCompletionTUInfo mCCTUInfo;
 
-  std::vector<std::pair<std::string, std::string>> mResultList;
+    std::vector<std::pair<std::string, std::string>> mResultList;
 
-  std::pair<std::string, std::string>
-  ProcessCodeCompleteResult(clang::Sema &sema,
-                            clang::CodeCompletionContext context,
-                            clang::CodeCompletionResult &result);
+    std::pair<std::string, std::string>
+    ProcessCodeCompleteResult(clang::Sema &sema,
+                              clang::CodeCompletionContext context,
+                              clang::CodeCompletionResult &result);
 
-  void ProcessCodeCompleteString(const clang::CodeCompletionString &ccs,
-                                 unsigned &argCount, std::string &first,
-                                 std::string &second,
-                                 std::string &informative) const;
+    void ProcessCodeCompleteString(const clang::CodeCompletionString &ccs,
+                                   unsigned &argCount, std::string &first,
+                                   std::string &second,
+                                   std::string &informative) const;
 
-  void printCompletionResult(std::ostream &os,
-                             clang::CodeCompletionResult *result);
+    void printCompletionResult(std::ostream &os,
+                               clang::CodeCompletionResult *result);
 };
 
 } // namespace Clara
