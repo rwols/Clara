@@ -94,7 +94,7 @@ Session::Session(const SessionOptions &options)
         throw ASTParseError();
     }
     if (mUnit->Reparse(mPchOps))
-    {	
+    {
         throw ASTParseError();
     }
 }
@@ -262,6 +262,7 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
     ]() {
         // We want only one thread at a time to execute this
         std::lock_guard<std::mutex> methodLock(mMethodMutex);
+        mUnit->Reparse(mPchOps);
         auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
         try
         {
