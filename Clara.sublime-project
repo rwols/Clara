@@ -31,7 +31,8 @@
 			"LLVM_ENABLE_EH": true,
 			"LLVM_ENABLE_RTTI": true,
 			"LLVM_TARGETS_TO_BUILD": "X86",
-			"CMAKE_BUILD_TYPE": "Debug"
+			"CMAKE_BUILD_TYPE": "Debug",
+			"CMAKE_EXPORT_COMPILE_COMMANDS": true
 		},
 		"generator": "Ninja",
 		"filter_targets":
