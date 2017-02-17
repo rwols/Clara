@@ -179,12 +179,14 @@ void Session::addPath(clang::CompilerInvocation *invocation,
                       const std::string &path, bool isFramework) const
 {
     auto &headerSearchOpts = invocation->getHeaderSearchOpts();
+
 #if PRINT_HEADER_SEARCH_PATHS
     std::string message("Adding system include path \"");
     message.append(path);
     message.append("\".");
     report(message.c_str());
 #endif // PRINT_HEADER_SEARCH_PATHS
+
     headerSearchOpts.AddPath(path, clang::frontend::System, isFramework,
                              /*ignoreSysRoot=*/false);
 }
@@ -267,7 +269,9 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
         try
         {
             pybind11::gil_scoped_acquire pythonLock;
-            callback(viewID, row, column, std::move(results));
+            mOptions.codeCompleteCallback(viewID, row, column,
+                                          std::move(results));
+            // callback(viewID, row, column, std::move(results));
             std::string reportMsg("There are ");
             reportMsg.append(std::to_string(mUnit->stored_diag_size()))
                 .append(" diags.");
