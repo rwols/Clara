@@ -19,7 +19,7 @@
 # doing a "naked" make can easily keep compiling for more than an hour.
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(Clara VERSION 0.1.0 LANGUAGES CXX)
+project(Clara VERSION 0.2.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (APPLE)
