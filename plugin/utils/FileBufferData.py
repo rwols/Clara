@@ -1,4 +1,4 @@
-import sublime
+import sublime, getpass, socket
 from .Functions import *
 from .ViewData import *
 from .ProgressIndicator import *
@@ -169,7 +169,10 @@ class FileBufferData(object):
 			'api_completions_only': False,
 			'next_competion_if_showing': True})
 
-	def _load_headers(self, key):
+	def _load_headers(self):
+		username = getpass.getuser()
+		hostname = socket.gethostname()
+		key = '{}@{}'.format(username, hostname)
 		settings = sublime.load_settings(g_CLARA_SETTINGS)
 		headers = settings.get(key)
 		global _loaded_headers_atleast_once
@@ -214,12 +217,14 @@ class FileBufferData(object):
 			return
 
 		# Load in the system headers and builtin headers.
-		builtins = self._load_headers('builtin_headers')
-		headers = self._load_headers('system_headers')
-		frameworks = self._load_headers('system_frameworks')
-		options.builtinHeaders = '' if builtins is None else builtins
-		options.systemHeaders = [""] if headers is None else headers
-		options.frameworks = '' if frameworks is None else frameworks
+		options.builtinHeaders = os.path.join(sublime.packages_path(), 'Clara', 'include')
+		headers_dict = self._load_headers()
+		if headers_dict:
+			options.systemHeaders = headers_dict['system_headers']
+			options.frameworks = headers_dict['system_frameworks']
+		else:
+			options.systemHeaders = ['']
+			options.frameworks = ['']
 
 		# At this point we can't really fail, so set the view's status to
 		# something informative to let the user know that we are parsing.

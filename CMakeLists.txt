@@ -36,8 +36,6 @@ mark_as_advanced(claraInstallFolder)
 add_subdirectory(plugin)
 add_subdirectory(lib)
 add_subdirectory(include)
-add_subdirectory(bin)
-add_subdirectory(test)
 
 if (CMAKE_SIZEOF_VOID_P EQUAL 8)
 	set(Clara_arch x64)

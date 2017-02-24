@@ -20,12 +20,12 @@
 					"shell_cmd": "cmake --build . --target ClaraPlugin"
 				}
 			],
-			"working_dir": "${project_path}/../../../../build/debug"
+			"working_dir": "${project_path}/../../../../build/release"
 		}
 	],
 	"cmake":
 	{
-		"build_folder": "${project_path}/../../../../build/debug",
+		"build_folder": "${project_path}/../../../../build/release",
 		"command_line_overrides":
 		{
 			"LLVM_ENABLE_EH": true,

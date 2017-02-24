@@ -1,38 +1,31 @@
 # pybind11 demands exceptions and RTTI
-unset(LLVM_REQUIRES_RTTI CACHE)
-unset(LLVM_REQUIRES_EH CACHE)
-unset(CLANG_RESOURCE_DIR CACHE)
-set(LLVM_REQUIRES_RTTI ON CACHE INTERNAL "Enable run time type information" )
-set(LLVM_REQUIRES_EH ON CACHE INTERNAL "Enable Exception handling")
-set(CLANG_RESOURCE_DIR ${CMAKE_INSTALL_PREFIX}/lib CACHE INTERNAL
-  "Relative directory from the Clang binary to its resource files.")
 
 set(LLVM_LINK_COMPONENTS 
-	X86Disassembler 
-	X86AsmParser 
-	X86CodeGen 
-	X86Desc 
-	Object 
-	X86Info 
-	X86AsmPrinter 
-	X86Utils 
-	SelectionDAG 
-	AsmPrinter 
-	CodeGen 
-	MCDisassembler  
-	ObjCARCOpts 
-	MCParser 
-	Linker 
-	ipo 
-	Vectorize 
-	ScalarOpts 
-	InstCombine 
-	TransformUtils 
-	Analysis 
-	Target 
-	MC 
-	BitWriter 
-	BitReader 
+	# X86Disassembler 
+	# X86AsmParser 
+	# X86CodeGen 
+	# X86Desc 
+	# Object 
+	# X86Info 
+	# X86AsmPrinter 
+	# X86Utils 
+	# SelectionDAG 
+	# AsmPrinter 
+	# CodeGen 
+	# MCDisassembler  
+	# ObjCARCOpts 
+	# MCParser 
+	# Linker 
+	# ipo 
+	# Vectorize 
+	# ScalarOpts 
+	# InstCombine 
+	# TransformUtils 
+	# Analysis 
+	# Target 
+	# MC 
+	# BitWriter 
+	# BitReader 
 	Core 
 	Support
 	)
