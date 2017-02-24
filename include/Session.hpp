@@ -8,6 +8,7 @@
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/PCHContainerOperations.h>
 
+#include <condition_variable>
 #include <mutex>
 
 namespace Clara
@@ -41,6 +42,8 @@ class Session
      * @param[in]  options  The options
      */
     Session(const SessionOptions &options);
+
+    ~Session();
 
     /**
      * @brief      Given a buffer that represents the unsaved file contents of
@@ -138,7 +141,13 @@ class Session
     std::unique_ptr<Clara::CodeCompleteConsumer> mCodeCompleteConsumer;
     std::unique_ptr<clang::ASTUnit> mUnit;
 
+    int mViewID;
+    int mRow;
+    int mColumn;
+    std::string mUnsavedBuffer;
+
     mutable std::mutex mMethodMutex;
+    mutable std::condition_variable mConditionVar;
 };
 
 } // namespace Clara

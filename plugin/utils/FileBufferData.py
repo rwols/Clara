@@ -19,8 +19,8 @@ class FileBufferData(object):
 		self.views = { initial_view.id(): ViewData(initial_view) }
 		# FIXME: Make do without the below member variable.
 		self.initial_view = initial_view 
-		self.point_to_completions = {}
-		self.inflight_completions = set()
+		self.completions = None
+		self.point = -1
 		thread = threading.Thread(target=self._initialize_session)
 		basename = os.path.basename(self.file_name)
 		ProgressIndicator(thread, self.file_name, 
@@ -69,35 +69,25 @@ class FileBufferData(object):
 			len(locations) > 1):
 			return None
 		point = locations[0]
+		if self.point == point and self.completions is not None:
+			completions = self.completions
+			self.completions = None
+			self.point = -1
+			return sublime_completion_tuple(completions)
 		if not view.match_selector(point, 'source.c++'):
 			return None
 		if '-' in prefix and not '->' in prefix:
 			return None
 		if '>' in prefix and not '->' in prefix:
 			return None
-		if ':' in prefix:
+		if ':' in prefix and not '::' in prefix:
 			return None
-		clara_print('popping point {}'.format(point))
-		completions = self.point_to_completions.pop(point, None)
-		if completions:
-			if completions == 'FOUND NOTHING':
-				clara_print('Did auto-completion, but found nothing.')
-				return None
-			else:
-				clara_print('Delivering completions')
-				return sublime_completion_tuple(completions)
-		else:
-			if point in self.inflight_completions:
-				clara_print('Already completing at point {}'.format(point))
-				return None
-			else:
-				clara_print('Starting new auto-completion run at point {} with prefix {}'
-					.format(point, prefix))
-				self.inflight_completions.add(point)
-				row, col = sublime_point_to_clang_rowcol(view, point)
-				unsaved_buffer = view.substr(sublime.Region(0, point))
-				self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, 
-					col, self._completion_callback)
+		clara_print('new auto-completion run at point {} with prefix {}'
+			.format(point, prefix))
+		row, col = sublime_point_to_clang_rowcol(view, point)
+		unsaved_buffer = view.substr(sublime.Region(0, point))
+		self.session.codeCompleteAsync(view.id(), unsaved_buffer, row, 
+			col, None)
 
 	def _diagnostic_callback(self, file_name, severity, row, column, message):
 		diag_message = "{}: {}:{}:{}: {}".format(
@@ -150,24 +140,20 @@ class FileBufferData(object):
 
 	def _completion_callback(self, view_id, row, col, completions):
 		view = self.views[view_id].view
-		point = clang_rowcol_to_sublime_point(view, row, col)
-		self.inflight_completions.discard(point)
+		self.point = clang_rowcol_to_sublime_point(view, row, col)
 		if sublime.active_window().active_view() != view:
 			# Too late, user is not interested anymore.
 			return
-		if point in self.point_to_completions:
-			clara_print('point {} is already in completion dictionary. '
-				.format(point))
-			return
-		clara_print('adding point {}'.format(point))
 		if len(completions) == 0:
-			completions = 'FOUND NOTHING'
-		self.point_to_completions[point] = completions
+			self.completions = None
+			self.point = -1
+			return
+		self.completions = completions
 		view.run_command('hide_auto_complete')
 		view.run_command('auto_complete', {
 			'disable_auto_insert': True,
-			'api_completions_only': False,
-			'next_competion_if_showing': True})
+			'api_completions_only': True,
+			'next_compeltion_if_showing': True})
 
 	def _load_headers(self):
 		username = getpass.getuser()

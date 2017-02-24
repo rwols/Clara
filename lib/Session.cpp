@@ -2,6 +2,7 @@
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
+#include <sstream>
 #include <thread>
 
 #define SKIP_FUNCTION_BODIES
@@ -27,7 +28,7 @@ Session::Session(const SessionOptions &options)
 {
     using namespace clang;
 
-    std::lock_guard<std::mutex> methodLock(mMethodMutex);
+    std::unique_lock<std::mutex> constructLock(mMethodMutex);
     pybind11::gil_scoped_release releaser;
 
     mFileOpts.WorkingDir = mOptions.workingDirectory;
@@ -97,6 +98,46 @@ Session::Session(const SessionOptions &options)
     {
         throw ASTParseError();
     }
+
+    auto workerLambda = [this]() {
+        report("reporting for duty");
+        std::unique_lock<std::mutex> lock(mMethodMutex);
+        while (true)
+        {
+            report("going to sleep");
+            mConditionVar.wait(lock, [this]() { return mViewID != 0; });
+            if (mViewID == -1) break;
+            report("woke up, starting completion run");
+
+            // reparsing the ASTUnit makes sure that the preamble is up-to-date
+            mUnit->Reparse(mPchOps);
+            auto results =
+                codeCompleteImpl(mUnsavedBuffer.c_str(), mRow, mColumn);
+            try
+            {
+                pybind11::gil_scoped_acquire pythonLock;
+                mOptions.codeCompleteCallback(mViewID, mRow, mColumn,
+                                              std::move(results));
+            }
+            catch (const std::exception &err)
+            {
+                report(err.what());
+            }
+            mViewID = 0;
+        }
+        report("goodbye!");
+    };
+
+    mViewID = 0;
+    constructLock.unlock();
+    std::thread(workerLambda).detach();
+}
+
+Session::~Session()
+{
+    // makes the worker thread stop execution
+    mViewID = -1;
+    mConditionVar.notify_one();
 }
 
 clang::CompilerInvocation *Session::createInvocationFromOptions()
@@ -223,10 +264,6 @@ Session::codeCompleteImpl(const char *unsavedBuffer, int row, int column)
         mOptions.codeCompleteIncludeOptionalArguments;
     LangOptions langOpts = mUnit->getLangOpts();
 
-    // mDiags = new DiagnosticsEngine(&mDiagIds, mDiagOpts.get(),
-    // &mDiagConsumer,
-    // false);
-    // mDiags->Reset();
     IntrusiveRefCntPtr<SourceManager> sourceManager(
         new SourceManager(*mDiags, *mFileMgr));
     mUnit->CodeComplete(mOptions.filename, row, column, remappedFiles,
@@ -256,37 +293,27 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
     using namespace clang::frontend;
 
     // No use in code-completion if there is no callback.
-    if (callback.is_none()) return;
+    if (mOptions.codeCompleteCallback.is_none()) return;
 
-    std::thread task([
-        this, viewID, row, column, callback{std::move(callback)},
-        unsavedBuffer{std::move(unsavedBuffer)}
-    ]() {
-        // We want only one thread at a time to execute this
-        std::lock_guard<std::mutex> methodLock(mMethodMutex);
-        mUnit->Reparse(mPchOps);
-        auto results = codeCompleteImpl(unsavedBuffer.c_str(), row, column);
-        try
-        {
-            pybind11::gil_scoped_acquire pythonLock;
-            mOptions.codeCompleteCallback(viewID, row, column,
-                                          std::move(results));
-            std::string reportMsg("There are ");
-            reportMsg.append(std::to_string(mUnit->stored_diag_size()))
-                .append(" diags.");
-            report(reportMsg.c_str());
-            for (auto iter = mUnit->stored_diag_begin();
-                 iter != mUnit->stored_diag_end(); ++iter)
-            {
-                report(iter->getMessage().str().c_str());
-            }
-        }
-        catch (const std::exception &err)
-        {
-            report(err.what());
-        }
-    });
-    task.detach();
+    std::unique_lock<std::mutex> methodLock(mMethodMutex, std::try_to_lock);
+    if (!methodLock)
+    {
+        report("Failed to acquire lock.");
+        return;
+    }
+    if (mViewID != 0)
+    {
+        report("ViewID is not zero, aborting.");
+        return;
+    }
+    mViewID = viewID;
+    mRow = row;
+    mColumn = column;
+    mUnsavedBuffer = std::move(unsavedBuffer);
+    report("releasing method lock");
+    methodLock.unlock();
+    report("notifying worker thread");
+    mConditionVar.notify_one();
 }
 
 bool Session::reparse()
@@ -316,5 +343,7 @@ void Session::report(const char *message) const
 {
     pybind11::gil_scoped_acquire lock;
     if (mOptions.logCallback.is_none()) return;
-    const_cast<Session *>(this)->mOptions.logCallback(message);
+    std::ostringstream ss;
+    ss << std::this_thread::get_id() << ": " << message;
+    const_cast<Session *>(this)->mOptions.logCallback(ss.str());
 }
