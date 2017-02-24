@@ -86,8 +86,8 @@ Session::Session(const SessionOptions &options)
         /*PrecompilePreambleAfterNParses*/ 2,
         /*TranslationUnitKind*/ clang::TU_Complete,
         /*CacheCodeCompletionResults*/ true,
-        /*IncludeBriefCommentsInCodeCompletion*/ mOptions
-            .codeCompleteIncludeBriefComments,
+        /*IncludeBriefCommentsInCodeCompletion*/
+        mOptions.codeCompleteIncludeBriefComments,
         /*UserFilesAreVolatile*/ true);
     if (!mUnit)
     {
@@ -271,7 +271,6 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
             pybind11::gil_scoped_acquire pythonLock;
             mOptions.codeCompleteCallback(viewID, row, column,
                                           std::move(results));
-            // callback(viewID, row, column, std::move(results));
             std::string reportMsg("There are ");
             reportMsg.append(std::to_string(mUnit->stored_diag_size()))
                 .append(" diags.");

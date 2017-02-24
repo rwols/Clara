@@ -4,9 +4,9 @@
 #include "Session.hpp"
 #include "SessionOptions.hpp"
 
-#include <llvm/Support/Path.h>
-#include <llvm/Support/Signals.h>
-#include <llvm/Support/TargetSelect.h>
+// #include <llvm/Support/Path.h>
+// #include <llvm/Support/Signals.h>
+// #include <llvm/Support/TargetSelect.h>
 
 #include <pybind11/stl.h>
 
@@ -25,10 +25,10 @@ PYBIND11_PLUGIN(Clara)
         gil_scoped_release releaser;
         if (notInitialized)
         {
-            llvm::InitializeAllTargets();
-            llvm::InitializeAllTargetMCs();
-            llvm::InitializeAllAsmPrinters();
-            llvm::InitializeAllAsmParsers();
+            // llvm::InitializeAllTargets();
+            // llvm::InitializeAllTargetMCs();
+            // llvm::InitializeAllAsmPrinters();
+            // llvm::InitializeAllAsmParsers();
             notInitialized = false;
         }
     });

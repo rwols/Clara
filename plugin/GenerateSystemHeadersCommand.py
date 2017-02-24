@@ -1,4 +1,4 @@
-import sublime, sublime_plugin, subprocess, os
+import sublime, sublime_plugin, subprocess, os, getpass, socket
 
 class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 	"""Generates system header info."""
@@ -27,12 +27,14 @@ class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
 		resource_dir = os.path.abspath(output.decode('utf-8').strip())
 		builtin_include = os.path.join(resource_dir, 'include')
 		if builtin_include in headers: headers.remove(builtin_include)
-		packages_path = sublime.packages_path()
-		resource_dir = os.path.join(packages_path, 'Clara', 'include')
 		settings = sublime.load_settings(SETTINGS)
-		settings.set('builtin_headers', resource_dir)
-		settings.set('system_headers', headers)
-		settings.set('system_frameworks', frameworks)
+		username = getpass.getuser()
+		hostname = socket.gethostname()
+		key = '{}@{}'.format(username, hostname)
+		header_dict = {
+			'system_headers': headers,
+			'system_frameworks': frameworks}
+		settings.set(key, header_dict)
 		sublime.save_settings(SETTINGS)
 		if sublime.ok_cancel_dialog(USER_MSG):
 			sublime.run_command('clara_open_settings')
