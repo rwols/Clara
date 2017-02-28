@@ -161,11 +161,11 @@ class FileBufferData(object):
 		key = '{}@{}'.format(username, hostname)
 		settings = sublime.load_settings(g_CLARA_SETTINGS)
 		headers = settings.get(key)
-		global _loaded_headers_atleast_once
+		global g_loaded_headers_atleast_once
 		if headers is not None:
 			return headers
-		elif not _loaded_headers_atleast_once:
-			_loaded_headers_atleast_once = True
+		elif not g_loaded_headers_atleast_once:
+			g_loaded_headers_atleast_once = True
 			if sublime.ok_cancel_dialog('You do not yet have headers set up. '
 				'Do you want to generate them now?'):
 				sublime.run_command('generate_system_headers')
