@@ -44,6 +44,14 @@ class EventListener(sublime_plugin.EventListener):
 	def on_activated(self, view):
 		ensure_compilation_database_exists_for_view(view)
 
+	def on_post_window_command(self, window, command_name, args):
+		clara_print('Got window command: ' + command_name)
+		if command_name == 'cmake_configure':
+			def f():
+				clara_print('Reloading compilation database for window {}'.format(window.id())) 
+				load_compilation_database_for_window(window)
+			sublime.set_timeout(f, 1000)
+			
 	def _get_file_buffer_data_for_view(self, view):
 		file_name = view.file_name()
 		if view.is_scratch() or not file_name:

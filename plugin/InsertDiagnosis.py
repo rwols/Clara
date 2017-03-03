@@ -1,4 +1,4 @@
-import sublime, sublime_plugin, subprocess, os
+import sublime, sublime_plugin, subprocess, os, shutil
 
 def getFromShell(str):
 	return subprocess.check_output(str, shell=True).decode('utf-8').strip()
@@ -8,6 +8,9 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 	def __init__(self, view):
 		super(ClaraInsertDiagnosisCommand, self).__init__(view)
 		self.errorCount = 0
+
+	def _command_exists(cmd):
+		return shutil.which(cmd) is not None
 
 	def run(self, edit):
 		self._diagnose(edit)
