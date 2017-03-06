@@ -45,7 +45,7 @@ to that code.
 
 The disclaimer of warranty in the University of Illinois Open Source License
 applies to all code in the Clara Distribution, and nothing in any of the
-other licenses gives permission to use the names of the Clara Team or the
+other licenses gives permission to use the name "Clara" or the
 University of Illinois to endorse or promote products derived from this
 Software.
 

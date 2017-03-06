@@ -12,7 +12,7 @@
 	"include_macros": true,
 
 	// Wether to include "code patterns" in auto-complete suggestions.
-	"include_code_patterns": true,
+	"include_code_patterns": false,
 
 	// Wether to include global variables in auto-complete suggestions.
 	"include_globals": true,
@@ -21,7 +21,7 @@
 	// documentation must be written in the Doxygen syntax in order to be picked
 	// up. The brief comments are displayed in the auto-completion panel to the
 	// right of the declaration after a colon.
-	"include_brief_comments": true,
+	"include_brief_comments": false,
 
 	// Wether to include optional arguments of functions and methods in
 	// auto-complet suggestions.
