@@ -21,7 +21,11 @@ add_custom_target(ClaraPackage
 # Deploys the ClaraPackage.
 add_custom_target(ClaraDeploy
     COMMAND
-        ${CMAKE_COMMAND} -D VERSION=${PROJECT_VERSION} -D ZIPFILE="${Clara_tar_output}" -P "${CMAKE_CURRENT_SOURCE_DIR}/Deploy.cmake"
+        ${CMAKE_COMMAND} 
+            -D VERSION=${PROJECT_VERSION} 
+            -D SUBLIME_PLATFORM_EXT=${SUBLIME_PLATFORM_EXT} 
+            -D ZIPFILE="${Clara_tar_output}" 
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/Deploy.cmake"
     DEPENDS
         ClaraPackage
     COMMENT

@@ -1,29 +1,33 @@
 {
-    "schema_version": "3.0.0",
-    "packages": 
-    [
+  "packages": [
+    {
+      "name": "Clara", 
+      "releases": [
         {
-            "author": "Raoul Wols",
-            "description": "Semantic C++ code completion using Clang",
-            "details": "https://github.com/rwols/Clara/wiki",
-            "issues": "https://github.com/rwols/Clara/issues",
-            "releases": 
-            [
-                {
-                    "version": "0.2.0",
-                    "date": "2017-03-06 00:00:00",
-                    "sublime_text": ">=3000",
-                    "platforms": ["linux-x64"],
-                    "url": "https://github.com/rwols/Clara/releases/download/0.2.0/Clara-0.2.0-Linux-x64.tar.tgz"
-                },
-                {
-                    "version": "0.2.0",
-                    "date": "2017-03-06 00:00:00",
-                    "sublime_text": ">=3000",
-                    "platforms": ["osx-x64"],
-                    "url": "https://github.com/rwols/Clara/releases/download/0.2.0/Clara-0.2.0-Darwin-x64.tar.tgz"
-                }
-            ]
+          "date": "2017-03-06 00:00:00", 
+          "platforms": [
+            "linux-x64"
+          ], 
+          "version": "0.2.0", 
+          "url": "https://github.com/rwols/Clara/releases/download/0.2.0/Clara-0.2.0-Linux-x64.zip", 
+          "sublime_text": ">=3000"
+        }, 
+        {
+          "date": "2017-03-08 13:18:08", 
+          "platforms": [
+            "osx-x64"
+          ], 
+          "version": "0.2.0", 
+          "url": "https://github.com/rwols/Clara/releases/download/0.2.0/Clara-0.2.0-Darwin-x64.zip", 
+          "sublime_text": ">=3000"
         }
-    ]
+      ], 
+      "author": "rwols", 
+      "details": "https://github.com/rwols/Clara/wiki", 
+      "readme": "https://raw.githubusercontent.com/wiki/rwols/Clara/Clara.md", 
+      "homepage": "https://github.com/rwols/Clara", 
+      "issues": "https://github.com/rwols/Clara/issues"
+    }
+  ], 
+  "schema_version": "3.0.0"
 }

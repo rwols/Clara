@@ -1,4 +1,4 @@
-# inputs must be VERSION and ZIPFILE
+# inputs must be VERSION, SUBLIME_PLATFORM_EXT and ZIPFILE
 if(DEFINED VERSION)
     message(STATUS "tag: ${VERSION}")
 else()
@@ -9,55 +9,31 @@ if(DEFINED ZIPFILE)
 else()
     message(FATAL_ERROR "ZIPFILE variable is required. Pass it via -D")
 endif()
+if(DEFINED SUBLIME_PLATFORM_EXT)
+    message(STATUS "platform: ${SUBLIME_PLATFORM_EXT}")
+else()
+    MESSAGE(FATAL_ERROR "SUBLIME_PLATFORM_EXT variable is required. Pass it via -D")
+endif()
 
 file(READ "${CMAKE_CURRENT_LIST_DIR}/messages/${VERSION}.txt" body)
 
-find_program(GITHUBRELEASE 
-    NAMES 
-        githubrelease 
-    HINTS
-        /usr/local/bin
-    DOC 
-        "githubrelease executable"
-    )
+find_package(PythonInterp REQUIRED)
 
-if(GITHUBRELEASE)
-    message(STATUS "Found githubrelease: ${GITHUBRELEASE}")
-else()
-    message(FATAL_ERROR "Could not find githubrelease executable.")
-endif()
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+include(GitHubRelease)
 
-message(STATUS "Creating release ${VERSION} on GitHub")
+githubrelease(rwols/Clara
+    TAG ${VERSION}
+    BODY ${body}
+    ASSETS "${ZIPFILE}")
+
+message(STATUS "Updating repository.json")
 execute_process(
     COMMAND
-        "${GITHUBRELEASE}" release rwols/Clara create ${VERSION}
-    )
-
-message(STATUS "Inserting body for release ${VERSION} on GitHub")
-execute_process(
-    COMMAND
-        "${GITHUBRELEASE}" release rwols/Clara edit ${VERSION} --body "${body}"
+        "${PYTHON_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/update-repository.py" --tag ${VERSION} --platform ${SUBLIME_PLATFORM_EXT} --zipfile "${ZIPFILE}"
     RESULT_VARIABLE
-        exit_status)
-
-if(NOT exit_status EQUAL 0)
-    message(FATAL_ERROR "Failed to set the text body of release ${VERSION}")
-endif()
-
-get_filename_component(zipname "${ZIPFILE}" NAME)
-message(STATUS "Deleting ${zipname} of release ${VERSION} on GitHub (if present)")
-execute_process(
-    COMMAND 
-        "${GITHUBRELEASE}" asset rwols/Clara delete ${VERSION} "${zipname}"
+        exit_status
     )
-
-message(STATUS "Uploading ${ZIPFILE} for release ${VERSION} to GitHub")
-execute_process(
-    COMMAND 
-        "${GITHUBRELEASE}" asset rwols/Clara upload ${VERSION} "${ZIPFILE}"
-    RESULT_VARIABLE
-        exit_status)
-
 if(NOT exit_status EQUAL 0)
-    message(FATAL_ERROR "Failed to upload ${ZIPFILE}")
+    message(FATAL_ERROR "Failed to update repository.json")
 endif()
