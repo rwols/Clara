@@ -1,0 +1,15 @@
+Select the correct tar file for your operating system. Currently, only 64-bit
+versions for OSX and Ubuntu are available. Download the attached tar file, 
+extract it, and put the resulting folder in the Packages folder of 
+Sublime Text 3.
+
+The packages folder for OSX is
+
+    ~/Library/Application\ Support/Sublime\ Text\ 3/Packages
+
+The packages folder for Linux is
+
+    ~/.config/sublime-text-3/Packages
+
+The "Linux" version might work on distributions other than Ubuntu, but I haven't
+tested that.

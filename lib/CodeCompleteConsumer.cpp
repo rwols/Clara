@@ -91,19 +91,20 @@ CodeCompleteConsumer::ProcessCodeCompleteResult(
         if (completion == nullptr)
         {
             second = result.Declaration->getNameAsString();
-            first = second + "\tDeclaration";
+            first = second + "\t[DECL]";
         }
         else
         {
             ProcessCodeCompleteString(*completion, argCount, first, second,
                                       informative);
+            if (informative.empty()) informative = "[DECL]";
         }
         break;
     }
 
     case CodeCompletionResult::RK_Keyword:
         second = result.Keyword;
-        first = second + "\tKeyword";
+        first = second + "\t[KEYWORD]";
         break;
 
     case CodeCompletionResult::RK_Macro:
@@ -113,12 +114,13 @@ CodeCompleteConsumer::ProcessCodeCompleteResult(
         if (completion == nullptr)
         {
             second = result.Macro->getNameStart();
-            first = second + "\tMacro";
+            first = second + "\t[MACRO]";
         }
         else
         {
             ProcessCodeCompleteString(*completion, argCount, first, second,
                                       informative);
+            if (informative.empty()) informative = "[MACRO]";
         }
         break;
     }
@@ -130,12 +132,13 @@ CodeCompleteConsumer::ProcessCodeCompleteResult(
         if (completion == nullptr)
         {
             second = result.Macro->getNameStart();
-            first = second + "\tPattern";
+            first = second + "\t[PATTERN]";
         }
         else
         {
             ProcessCodeCompleteString(*completion, argCount, first, second,
                                       informative);
+            if (informative.empty()) informative = "[PATTERN]";
         }
         break;
     }
@@ -169,6 +172,7 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
         if (j != ccs.getAnnotationCount() - 1) informative += ' ';
     }
 
+    std::string resultType;
     for (const auto &chunk : ccs)
     {
         switch (chunk.Kind)
@@ -179,7 +183,7 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
             // typically a keyword or the name of a declarator or macro.
             first += chunk.Text;
             second += chunk.Text;
-            informative += chunk.Text;
+            // informative += chunk.Text;
             break;
         case CodeCompletionString::CK_Text:
             // A piece of text that should be placed in the buffer,
@@ -217,8 +221,9 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
         case CodeCompletionString::CK_ResultType:
             // A piece of text that describes the type of an entity or,
             // for functions and methods, the return type.
-            informative += chunk.Text;
-            informative += " ";
+            resultType = chunk.Text;
+            // informative += chunk.Text;
+            // informative += " -> ";
             break;
         case CodeCompletionString::CK_CurrentParameter:
             // A piece of text that describes the parameter that corresponds to
@@ -305,10 +310,26 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
             break;
         }
     }
-
+    if (first.empty() == false && first.find('~') != std::string::npos)
+    {
+        informative = "[DESTR]";
+    }
+    else if (resultType.empty() == false)
+    {
+        if (informative == "()")
+        {
+            informative = "(void) -> ";
+        }
+        else if (informative.find('(') != std::string::npos &&
+                 informative.find(')') != std::string::npos)
+        {
+            informative += " -> ";
+        }
+        informative += resultType;
+    }
     if (ccs.getBriefComment() != nullptr)
     {
-        informative += ": ";
+        informative += " : ";
         informative += ccs.getBriefComment();
     }
 }

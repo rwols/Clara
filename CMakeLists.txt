@@ -18,14 +18,54 @@
 # with 8 threads. It should not take more than 3 minutes, while
 # doing a "naked" make can easily keep compiling for more than an hour.
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+# At least version 3.2 is needed because we want to use CMake's built-in zip
+# functionality. This is available since version 3.2.
+cmake_minimum_required(VERSION 3.2)
 project(Clara VERSION 0.2.0 LANGUAGES CXX)
+
+option(Clara_DEPLOY "Enable deployment to GitHub" OFF)
+
+# Find Sublime Text. No point in building Clara when Sublime is not present.
+find_program(SUBLIME_EXECUTABLE
+    NAMES
+        subl
+    DOC
+        "Sublime Text executable"
+    )
+
+if (SUBLIME_EXECUTABLE)
+    message(STATUS "Found Sublime Text: ${SUBLIME_EXECUTABLE}")
+else()
+    message(FATAL_ERROR "Could not find Sublime Text executable.")
+endif()
+
+execute_process(
+    COMMAND 
+        ${SUBLIME_EXECUTABLE} --version
+    OUTPUT_VARIABLE 
+        SUBLIME_VERSION)
+
+string(REGEX REPLACE
+    "Sublime Text Build ([0-9]+)"
+    "\\1" SUBLIME_VERSION "${SUBLIME_VERSION}")
+
+set(SUBLIME_VERSION ${SUBLIME_VERSION} CACHE INTERNAL "Sublime Text version")
+
+message(STATUS "Sublime Text version: ${SUBLIME_VERSION}")
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 if (APPLE)
+    set(SUBLIME_PLATFORM osx CACHE INTERNAL "")
 	set(claraInstallFolderPrefix "$ENV{HOME}/Library/Application Support/Sublime Text 3")
-else()
+elseif(WIN32)
+    set(SUBLIME_PLATFORM windows CACHE INTERNAL "")
+    set(claraInstallFolderPrefix "$ENV{HOME}/AppData/blah")
+elseif(UNIX)
+    set(SUBLIME_PLATFORM linux CACHE INTERNAL "")
 	set(claraInstallFolderPrefix "$ENV{HOME}/.config/sublime-text-3")
+else()
+    message(FATAL_ERROR "Unsupported Sublime Text platform.")
 endif()
 set(currentSublimePackagesFolder "${claraInstallFolderPrefix}/Packages")
 set(claraInstallFolder "${currentSublimePackagesFolder}/Clara")
@@ -37,20 +77,8 @@ add_subdirectory(plugin)
 add_subdirectory(lib)
 add_subdirectory(include)
 
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(Clara_arch x64)
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	set(Clara_arch x86)
-else()
-	message(FATAL_ERROR "Unknown architecture! (Neither 32 nor 64 bits)")
+if (${Clara_DEPLOY})
+    add_subdirectory(deploy)
 endif()
 
-set(Clara_version ${PROJECT_NAME}-${PROJECT_VERSION})
-set(Clara_package_name ${Clara_version}-${CMAKE_SYSTEM_NAME}-${Clara_arch}.tar.tgz)
-set(Clara_tar_output "${CMAKE_BINARY_DIR}/${Clara_package_name}")
 
-add_custom_target(ClaraPackage
-	COMMAND ${CMAKE_COMMAND} -E tar zcvf "${Clara_tar_output}" Clara
-	DEPENDS ClaraInstall
-	WORKING_DIRECTORY "${currentSublimePackagesFolder}"
-	COMMENT "Packaging Clara")

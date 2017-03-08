@@ -29,12 +29,12 @@
 					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/rebuild_cache"
 				},
 				{
-					"name": "tools/clang/tools/Clara/package",
-					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/package"
-				},
-				{
 					"name": "tools/clang/tools/Clara/list_install_components",
 					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/package"
 				},
 				{
 					"name": "tools/clang/tools/Clara/plugin/install/local",
@@ -149,6 +149,38 @@
 					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/package"
 				},
 				{
+					"name": "tools/clang/tools/Clara/deploy/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/list_install_components"
+				},
+				{
+					"name": "ClaraDeploy",
+					"shell_cmd": "cmake --build . --target ClaraDeploy"
+				},
+				{
 					"name": "ClaraInstall",
 					"shell_cmd": "cmake --build . --target ClaraInstall"
 				},
@@ -172,8 +204,7 @@
 			"CMAKE_BUILD_TYPE": "Release",
 			"CMAKE_EXPORT_COMPILE_COMMANDS": true,
 			"LLVM_ENABLE_EH": true,
-			"LLVM_ENABLE_RTTI": true,
-			// "LLVM_TARGETS_TO_BUILD": "X86"
+			"LLVM_ENABLE_RTTI": true
 		},
 		"filter_targets":
 		[
