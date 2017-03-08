@@ -21,6 +21,17 @@ find_package(PythonInterp REQUIRED)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 include(GitHubRelease)
+include(GitUtilities)
+
+get_git_branch("${CMAKE_CURRENT_LIST_DIR}/.." GIT_BRANCH)
+get_git_commit("${CMAKE_CURRENT_LIST_DIR}/.." GIT_COMMIT)
+
+message(STATUS "git branch: ${GIT_BRANCH}")
+message(STATUS "git commit: ${GIT_COMMIT}")
+
+if(NOT GIT_BRANCH STREQUAL master)
+    message(FATAL_ERROR "You are on branch ${GIT_BRANCH}; you can only deploy from the master branch.")
+endif()
 
 githubrelease(rwols/Clara
     TAG ${VERSION}
