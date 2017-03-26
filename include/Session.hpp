@@ -101,6 +101,9 @@ class Session
      */
     void save() const;
 
+    std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
+    visitLocalDeclarations();
+
     void report(const char *message) const;
 
   private:

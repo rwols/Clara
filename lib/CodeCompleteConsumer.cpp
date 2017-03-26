@@ -26,11 +26,10 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
 
     // FIXME: Do we need to sort the completions by priority or is it sufficient
     // if Sublime does the sorting via its fuzzy matching algorithm?
-    // std::stable_sort(results, results + numResults, [](const auto& lhs, const
-    // auto& rhs)
-    // {
-    //  return lhs.Priority < rhs.Priority;
-    // });
+    std::sort(results, results + numResults,
+              [](const auto &lhs, const auto &rhs) {
+                  return lhs.Priority > rhs.Priority;
+              });
 
     for (unsigned i = 0; i < numResults; ++i)
     {
@@ -138,7 +137,10 @@ CodeCompleteConsumer::ProcessCodeCompleteResult(
         {
             ProcessCodeCompleteString(*completion, argCount, first, second,
                                       informative);
-            if (informative.empty()) informative = "[PATTERN]";
+            // FIXME: For some reason, clang reports macro's as patterns ?!
+            // Let's not confuse the user and just not put this informational
+            // banner in the completion widget.
+            // if (informative.empty()) informative = "[PATTERN]";
         }
         break;
     }
@@ -183,12 +185,10 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
             // typically a keyword or the name of a declarator or macro.
             first += chunk.Text;
             second += chunk.Text;
-            // informative += chunk.Text;
             break;
         case CodeCompletionString::CK_Text:
             // A piece of text that should be placed in the buffer,
             // e.g., parentheses or a comma in a function call.
-            // first += chunk.Text;
             informative += chunk.Text;
             second += chunk.Text;
             break;
@@ -206,11 +206,21 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
             // A string that acts as a placeholder for, e.g., a function call
             // argument.
             ++argCount;
-            informative += chunk.Text;
             second += "${";
             second += std::to_string(argCount);
             second += ":";
-            second += chunk.Text;
+            // Try to ignore leading underscores for standard library function
+            // arguments. This makes the completions cleaner.
+            if (strncmp("__", chunk.Text, 2) == 0)
+            {
+                informative += (chunk.Text + 2);
+                second += (chunk.Text + 2);
+            }
+            else
+            {
+                informative += chunk.Text;
+                second += chunk.Text;
+            }
             second += "}";
             break;
         case CodeCompletionString::CK_Informative:
@@ -231,11 +241,21 @@ void CodeCompleteConsumer::ProcessCodeCompleteString(
             // send,
             // macro invocation, etc.
             ++argCount;
-            informative += chunk.Text;
             second += "${";
             second += std::to_string(argCount);
             second += ":";
-            second += chunk.Text;
+            // Try to ignore leading underscores for standard library function
+            // arguments. This makes the completions cleaner.
+            if (strncmp("__", chunk.Text, 2) == 0)
+            {
+                informative += (chunk.Text + 2);
+                second += (chunk.Text + 2);
+            }
+            else
+            {
+                informative += chunk.Text;
+                second += chunk.Text;
+            }
             second += "}";
             break;
         case CodeCompletionString::CK_LeftParen:

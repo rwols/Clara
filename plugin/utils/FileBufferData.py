@@ -260,6 +260,9 @@ class FileBufferData(object):
 		except ASTParseError as e:
 			clara_print(str(e))
 
+		decls = self.session.visitLocalDeclarations()
+		print(decls)
+
 	def _reparse(self):
 		clara_print('Reparsing "{}"'.format(self.file_name))
 		self.is_reparsing = True

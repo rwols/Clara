@@ -87,6 +87,7 @@ PYBIND11_PLUGIN(Clara)
         .def("reparse", &Session::reparse)
         .def("filename", &Session::getFilename)
         .def("save", &Session::save)
+        .def("visitLocalDeclarations", &Session::visitLocalDeclarations)
         .def("__repr__", [](const Session &session) {
             std::string result("<Clara.Session object for file \"");
             result.append(session.getFilename()).append("\">");

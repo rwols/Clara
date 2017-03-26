@@ -105,4 +105,4 @@ def sublime_completion_tuple(completions):
 	iec = settings.get('inhibit_explicit_completions', True)
 	iwc = sublime.INHIBIT_WORD_COMPLETIONS if iwc else 0
 	iec = sublime.INHIBIT_EXPLICIT_COMPLETIONS if iec else 0
-	return (completions, iwc | iec) 
+	return (completions, iwc | iec)
