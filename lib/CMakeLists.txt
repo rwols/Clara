@@ -51,6 +51,8 @@ set(source_files
 	CompilationDatabase.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
+	RegionClassifierConsumer.cpp
+	RegionClassifierVisitor.cpp
 	Session.cpp
 	SessionOptions.cpp)
 

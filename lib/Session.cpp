@@ -1,4 +1,7 @@
-#include "../include/Session.hpp"
+#include "Session.hpp"
+#include "RegionClassifierConsumer.hpp"
+#include "RegionClassifierVisitor.hpp"
+#include <clang/Frontend/ASTUnit.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <pybind11/stl.h>
@@ -345,104 +348,122 @@ void Session::report(const char *message) const
     const_cast<Session *>(this)->mOptions.logCallback(ss.str());
 }
 
-static void addRegionForEntity(
+void Session::addRegionForEntity(
     std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
         &map,
-    const char *entityname, const clang::SourceManager *sourceMgr,
-    const clang::Decl *decl)
+    const char *entityname, const clang::Decl *decl) const
 {
-    const auto start = sourceMgr->getSpellingLoc(decl->getLocStart());
-    const auto end = sourceMgr->getSpellingLoc(decl->getLocEnd());
-    const auto startOffset = sourceMgr->getFileOffset(start);
-    const auto endOffset = sourceMgr->getFileOffset(end);
-    map[entityname].emplace_back(startOffset, endOffset);
+    std::string msg = "processing decl: ";
+    llvm::raw_string_ostream ss(msg);
+    decl->dump(ss);
+    ss.flush();
+    report(msg.c_str());
+    // auto start = decl->getLocStart();
+    // start = mUnit->mapLocationFromPreamble(start);
+    // start = mSourceMgr->getSpellingLoc(start);
+    // if (start.isInvalid() || !mUnit->isInMainFileID(start))
+    // {
+    //     return;
+    // }
+    // auto end = decl->getLocStart();
+    // end = mUnit->mapLocationFromPreamble(end);
+    // end = mSourceMgr->getSpellingLoc(end);
+    // if (start.isInvalid() || !mUnit->isInMainFileID(start))
+    // {
+    //     return;
+    // }
+    // const auto startOffset = mSourceMgr->getFileOffset(start);
+    // const auto endOffset = mSourceMgr->getFileOffset(end);
+    // map[entityname].emplace_back(startOffset, endOffset);
+    // mSourceMgr->getSpellingLoc(mUnit->get)
+    // if (decl->getLocStart().isInvalid()) return;
+    // if (decl->getLocEnd().isInvalid()) return;
+    // const auto start = mSourceMgr->getSpellingLoc(decl->getLocStart());
+    // const auto end = mSourceMgr->getSpellingLoc(decl->getLocEnd());
+    // // if (start.isInvalid()) return;
+    // // if (end.isInvalid()) return;
+    // // if (!mUnit->isInMainFileID(start)) return;
+    // // if (!mUnit->isInMainFileID(end)) return;
+    // const auto startdecomp = mSourceMgr->getDecomposedLoc(start);
+    // const auto enddecomp = mSourceMgr->getDecomposedLoc(end);
+    // if (startdecomp.first.isInvalid()) return;
+    // if (enddecomp.first.isInvalid()) return;
+    // const auto startOffset = startdecomp.second;
+    // const auto endOffset = enddecomp.second;
+    // const auto startOffset = mSourceMgr->getFileOffset(start);
+    // const auto endOffset = mSourceMgr->getFileOffset(end);
+    // map[entityname].emplace_back(startOffset, endOffset);
 }
 
 std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
 Session::visitLocalDeclarations()
 {
     // std::lock_guard<std::mutex> methodLock(mMethodMutex);
-    // pybind11::gil_scoped_release releaser;
-    // using Context =
-    //    std::pair<clang::SourceManager *,
-    //              std::map<std::string,
-    //                       std::vector<std::pair<std::size_t, std::size_t>>>
-    //                       *>;
-    std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
-        result;
+    pybind11::gil_scoped_release releaser;
+    // const auto &ctx = mUnit->getASTContext();
+    // RegionClassifierConsumer mConsumer;
+    // mConsumer.HandleTranslationUnit(const_cast<clang::ASTContext &>(ctx));
+    // mConsumer.moveResult(result);
+    // return result;
 
-    std::string msg("processing ");
-    msg.append(std::to_string(mUnit->top_level_size()))
-        .append(" top level decls");
-    report(msg.c_str());
+    // std::string msg("processing ");
+    // msg.append(std::to_string(mUnit->top_level_size()))
+    //     .append(" top level decls");
+    // report(msg.c_str());
 
-    // Context context{mSourceMgr.get(), &result};
+    RegionClassifierVisitor visitor(mUnit.get(), mOptions.logCallback);
     for (auto decliter = mUnit->top_level_begin();
          decliter != mUnit->top_level_end(); ++decliter)
     {
         const auto decl = *decliter;
-        if (auto tag = llvm::dyn_cast<clang::TagDecl>(decl))
-        {
-            // For the scope names, see:
-            // https://www.sublimetext.com/docs/3/scope_naming.html
-            // auto pair = static_cast<Context *>(ctx);
-            // auto *sourceMgr = pair->first;
-            // auto &map = *(pair->second);
-            // if (tag->isNamespace())
-            // {
-            //     addRegionForEntity(result, "entity.name.namespace",
-            //                        mSourceMgr.get(), decl);
-            // }
-            // else if (tag->isClass())
-            // {
-            //     addRegionForEntity(result, "entity.name.class",
-            //                        mSourceMgr.get(), decl);
-            // }
-            // else if (tag->isStruct())
-            // {
-            //     addRegionForEntity(result, "entity.name.struct",
-            //                        mSourceMgr.get(), decl);
-            // }
-            // else if (tag->isFunctionOrMethod())
-            // {
-            //     addRegionForEntity(result, "entity.name.function",
-            //                        mSourceMgr.get(), decl);
-            // }
-        }
+        visitor.TraverseDecl(decl);
+        //     msg = "";
+        //     llvm::raw_string_ostream ss(msg);
+        //     decl->dump(ss);
+        //     ss.flush();
+        //     report(msg.c_str());
+        //     if (const auto tag = llvm::dyn_cast<const clang::TagDecl>(decl))
+        //     {
+        //         // For the scope names, see:
+        //         // https://www.sublimetext.com/docs/3/scope_naming.html
+        //         if (tag->isNamespace())
+        //         {
+        //             addRegionForEntity(result, "entity.name.namespace",
+        //             decl);
+        //         }
+        //         else if (tag->isClass())
+        //         {
+        //             addRegionForEntity(result, "entity.name.class", decl);
+        //         }
+        //     }
+        //     else if (const auto value =
+        //                  llvm::dyn_cast<const clang::ValueDecl>(decl))
+        //     {
+        //         if (const auto t = value->getType().getTypePtrOrNull())
+        //         {
+        //             if (const auto tag = t->getAsTagDecl())
+        //             {
+        //                 // For the scope names, see:
+        //                 //
+        //                 //
+        //                 https://www.sublimetext.com/docs/3/scope_naming.html
+        //                 if (tag->isNamespace())
+        //                 {
+        //                     addRegionForEntity(result,
+        //                     "entity.name.namespace",
+        //                                        decl);
+        //                 }
+        //                 else if (tag->isClass())
+        //                 {
+        //                     addRegionForEntity(result, "entity.name.class",
+        //                     decl);
+        //                 }
+        //             }
+        //         }
+        //     }
     }
-    // mUnit->visitLocalTopLevelDecls(
-    //     &context, [](void *ctx, const clang::Decl *decl) -> bool {
-    //         if (auto tag = llvm::dyn_cast<clang::TagDecl>(decl))
-    //         {
-    //             // For the scope names, see:
-    //             // https://www.sublimetext.com/docs/3/scope_naming.html
-    //             auto pair = static_cast<Context *>(ctx);
-    //             auto *sourceMgr = pair->first;
-    //             auto &map = *(pair->second);
-    //             if (tag->isNamespace())
-    //             {
-    //                 addRegionForEntity(map, "entity.name.namespace",
-    //                 sourceMgr,
-    //                                    decl);
-    //             }
-    //             else if (tag->isClass())
-    //             {
-    //                 addRegionForEntity(map, "entity.name.class", sourceMgr,
-    //                                    decl);
-    //             }
-    //             else if (tag->isStruct())
-    //             {
-    //                 addRegionForEntity(map, "entity.name.struct", sourceMgr,
-    //                                    decl);
-    //             }
-    //             else if (tag->isFunctionOrMethod())
-    //             {
-    //                 addRegionForEntity(map, "entity.name.function",
-    //                 sourceMgr,
-    //                                    decl);
-    //             }
-    //         }
-    //         return true;
-    //     });
+    std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
+        result;
+    visitor.moveResult(result);
     return result;
 }

@@ -4,12 +4,16 @@
 #include "DiagnosticConsumer.hpp"
 #include "SessionOptions.hpp"
 
-#include <clang/Frontend/ASTUnit.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/PCHContainerOperations.h>
 
 #include <condition_variable>
 #include <mutex>
+
+namespace clang
+{
+class ASTUnit;
+}
 
 namespace Clara
 {
@@ -125,6 +129,10 @@ class Session
         clang::CompilerInvocation *invocation) const;
     void resetDiagnosticsEngine();
     clang::CompilerInvocation *createInvocationFromOptions();
+    void addRegionForEntity(
+        std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
+            &map,
+        const char *entityname, const clang::Decl *decl) const;
 
     clang::SmallVector<clang::StoredDiagnostic, 8>
         mStoredDiags; // ugly hack, wait for clang devs to fix this

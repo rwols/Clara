@@ -23,7 +23,7 @@ class FileBufferData(object):
 		self.point = -1
 		thread = threading.Thread(target=self._initialize_session)
 		basename = os.path.basename(self.file_name)
-		ProgressIndicator(thread, self.file_name, 
+		ProgressIndicator(thread, 'ZZZZ_' + self.file_name, 
 			"Parsing {}".format(basename), "Parsed {}".format(basename))
 		thread.start()
 
@@ -45,11 +45,11 @@ class FileBufferData(object):
 
 	def set_status(self, message):
 		for view_id, view_data in self.views.items():
-			view_data.view.set_status('Clara', message)
+			view_data.view.set_status('ZZZZ_Clara', message)
 
 	def erase_status(self):
 		for view_id, view_data in self.views.items():
-			view_data.view.erase_status('Clara')
+			view_data.view.erase_status('ZZZZ_Clara')
 
 	def on_post_save(self):
 		if (self.session and 
@@ -271,5 +271,8 @@ class FileBufferData(object):
 			self.is_reparsing = False
 			self.session = None
 			self.session_is_loading = True
+			return
+		decls = self.session.visitLocalDeclarations()
+		print(decls)
 		self.is_reparsing = False
 		clara_print('Reparsed "{}"'.format(self.file_name))
