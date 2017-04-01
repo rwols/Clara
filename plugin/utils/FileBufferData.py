@@ -90,9 +90,6 @@ class FileBufferData(object):
 			col, None)
 
 	def _diagnostic_callback(self, file_name, severity, row, column, message):
-		diag_message = "{}: {}:{}:{}: {}".format(
-			severity, file_name, str(row), str(column), message)
-		clara_print(diag_message)
 		if file_name != '' and file_name != self.file_name:
 			return
 		div_class = None
@@ -129,8 +126,11 @@ class FileBufferData(object):
 				print('point: {}'.format(point))
 				point = max(0, point - 2)
 				layout = sublime.LAYOUT_BELOW
+				clara_print('{}:{}:{}:{}: {}'.format(
+					severity, file_name, str(row), str(column), message))
 			else:
 				layout = sublime.LAYOUT_BLOCK
+				clara_print('{}:{}: {}'.format(severity, file_name, message))
 			region = sublime.Region(point, point)
 			message = replace_single_quotes_by_tag(message, 'b')
 			message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(div_class, message)
@@ -259,9 +259,6 @@ class FileBufferData(object):
 			clara_print('Loaded "{}".'.format(self.file_name))
 		except ASTParseError as e:
 			clara_print(str(e))
-
-		decls = self.session.visitLocalDeclarations()
-		print(decls)
 
 	def _reparse(self):
 		clara_print('Reparsing "{}"'.format(self.file_name))

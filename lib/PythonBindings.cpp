@@ -3,11 +3,6 @@
 #include "DiagnosticConsumer.hpp"
 #include "Session.hpp"
 #include "SessionOptions.hpp"
-
-// #include <llvm/Support/Path.h>
-// #include <llvm/Support/Signals.h>
-// #include <llvm/Support/TargetSelect.h>
-
 #include <pybind11/stl.h>
 
 PYBIND11_PLUGIN(Clara)
@@ -25,10 +20,6 @@ PYBIND11_PLUGIN(Clara)
         gil_scoped_release releaser;
         if (notInitialized)
         {
-            // llvm::InitializeAllTargets();
-            // llvm::InitializeAllTargetMCs();
-            // llvm::InitializeAllAsmPrinters();
-            // llvm::InitializeAllAsmParsers();
             notInitialized = false;
         }
     });
@@ -87,7 +78,6 @@ PYBIND11_PLUGIN(Clara)
         .def("reparse", &Session::reparse)
         .def("filename", &Session::getFilename)
         .def("save", &Session::save)
-        .def("visitLocalDeclarations", &Session::visitLocalDeclarations)
         .def("__repr__", [](const Session &session) {
             std::string result("<Clara.Session object for file \"");
             result.append(session.getFilename()).append("\">");

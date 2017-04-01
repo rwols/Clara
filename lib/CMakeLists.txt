@@ -1,31 +1,6 @@
 # pybind11 demands exceptions and RTTI
 
-set(LLVM_LINK_COMPONENTS 
-	# X86Disassembler 
-	# X86AsmParser 
-	# X86CodeGen 
-	# X86Desc 
-	# Object 
-	# X86Info 
-	# X86AsmPrinter 
-	# X86Utils 
-	# SelectionDAG 
-	# AsmPrinter 
-	# CodeGen 
-	# MCDisassembler  
-	# ObjCARCOpts 
-	# MCParser 
-	# Linker 
-	# ipo 
-	# Vectorize 
-	# ScalarOpts 
-	# InstCombine 
-	# TransformUtils 
-	# Analysis 
-	# Target 
-	# MC 
-	# BitWriter 
-	# BitReader 
+set(LLVM_LINK_COMPONENTS
 	Core 
 	Support
 	)
@@ -51,8 +26,6 @@ set(source_files
 	CompilationDatabase.cpp
 	DiagnosticConsumer.cpp
 	PythonBindings.cpp
-	RegionClassifierConsumer.cpp
-	RegionClassifierVisitor.cpp
 	Session.cpp
 	SessionOptions.cpp)
 

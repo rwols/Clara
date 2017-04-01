@@ -105,9 +105,6 @@ class Session
      */
     void save() const;
 
-    std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
-    visitLocalDeclarations();
-
     void report(const char *message) const;
 
   private:
@@ -129,10 +126,6 @@ class Session
         clang::CompilerInvocation *invocation) const;
     void resetDiagnosticsEngine();
     clang::CompilerInvocation *createInvocationFromOptions();
-    void addRegionForEntity(
-        std::map<std::string, std::vector<std::pair<std::size_t, std::size_t>>>
-            &map,
-        const char *entityname, const clang::Decl *decl) const;
 
     clang::SmallVector<clang::StoredDiagnostic, 8>
         mStoredDiags; // ugly hack, wait for clang devs to fix this

@@ -24,6 +24,12 @@ void DiagnosticConsumer::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
                                           const clang::Diagnostic &info)
 {
     clang::DiagnosticConsumer::HandleDiagnostic(level, info);
+    if (!mSourceMgr->isInMainFile(info.getLocation()))
+    {
+        // not interested in diagnostics that are somewhere outside of the
+        // file that we're looking at.
+        return;
+    }
     llvm::SmallString<128> message;
     info.FormatDiagnostic(message);
     const auto presumedLoc = makePresumedLoc(info);

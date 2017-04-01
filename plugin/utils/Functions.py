@@ -17,8 +17,9 @@ def verify_platform():
 def clara_print(message):
 	if sublime.load_settings(g_CLARA_SETTINGS).get('debug', True):
 		with g_printer_lock as lock:
-			t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-			print('Clara:{}: {}'.format(t, message))
+			print('Clara: {}'.format(message))
+			# t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
+			# print('Clara:{}: {}'.format(t, message))
 
 def is_implementation_file(file_name):
 	extension = os.path.splitext(file_name)[1]
@@ -57,25 +58,28 @@ def ensure_compilation_database_exists_for_view(view):
 
 def load_compilation_database_for_window(window):
 	try:
-		project = window.project_data()
-		if project is None: raise Exception(
-			'No sublime-project found for window {}.'.format(window.id()))
-		cmake = project.get('cmake')
-		if cmake is None: raise Exception(
-			'No cmake settings found for "{}".'.format(
-				window.project_file_name()))
-		cmake = sublime.expand_variables(
-			cmake, window.extract_variables())
-		build_folder = cmake.get('build_folder')
-		if build_folder is None:
+		settings = window.active_view().settings()
+		compile_commands = settings.get('compile_commands')
+		compile_commands = sublime.expand_variables(compile_commands, window.extract_variables())
+		# project = window.project_data()
+		# if project is None: raise Exception(
+		# 	'No sublime-project found for window {}.'.format(window.id()))
+		# cmake = project.get('cmake')
+		# if cmake is None: raise Exception(
+		# 	'No cmake settings found for "{}".'.format(
+		# 		window.project_file_name()))
+		# cmake = sublime.expand_variables(
+		# 	cmake, window.extract_variables())
+		# build_folder = cmake.get('build_folder')
+		if not compile_commands:
 			raise KeyError(
-				'No "build_folder" key present in "cmake" settings of "{}".'
+				'No "compile_commands" key present in settings.'
 				.format(window.project_file_name()))
 		else:
-			compdb = CompilationDatabase(build_folder)
+			compdb = CompilationDatabase(compile_commands)
 			g_compilation_databases[window.id()] = compdb
 			clara_print('Loaded compilation database for window {}, located'
-			' in "{}"'.format(window.id(), build_folder))
+			' in "{}"'.format(window.id(), compile_commands))
 	except Exception as e:
 		clara_print('Window {}: {}'.format(window.id(), str(e)))
 

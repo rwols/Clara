@@ -89,6 +89,7 @@ mark_as_advanced(claraInstallFolder)
 add_subdirectory(plugin)
 add_subdirectory(lib)
 add_subdirectory(include)
+add_subdirectory(test)
 
 if (${Clara_DEPLOY})
     add_subdirectory(deploy)

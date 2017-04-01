@@ -2,50 +2,55 @@
 	"build_systems":
 	[
 		{
-			"file_regex": "(.+[^:]):(\\d+):(\\d+): (?:fatal )?((?:error|warning): .+)$",
 			"name": "Clara",
-			"shell_cmd": "cmake --build .",
-			"syntax": "Packages/CMakeBuilder/Syntax/Ninja.sublime-syntax",
+			"target": "cmake_build",
+			"generator": "Ninja",
+			"source_folder": "${project_path}/../../../..",
+			"build_folder": "${project_path}/../../../../build/release",
+			"command_line_overrides":
+			{
+				"BUILD_SHARED_LIBS": false,
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+				"LLVM_ENABLE_EH": true,
+				"LLVM_ENABLE_RTTI": true
+			},
 			"variants":
 			[
 				{
-					"name": "Clara",
-					"shell_cmd": "cmake --build . --target Clara"
+					"name": "Configure",
+					"configure": true,
 				},
 				{
-					"name": "ClaraInstall",
-					"shell_cmd": "cmake --build . --target ClaraInstall"
+					"name": "Build Target...",
+					"select": true
 				},
 				{
-					"name": "ClaraPlugin",
-					"shell_cmd": "cmake --build . --target ClaraPlugin"
+					"name": "Clear Cache",
+					"clear_cache": true
+				},
+				{
+					"name": "Run CTest",
+					"run_ctest": true,
 				}
 			],
-			"working_dir": "${project_path}/../../../../build/release"
-		}
-	],
-	"cmake":
-	{
-		"build_folder": "${project_path}/../../../../build/release",
-		"command_line_overrides":
-		{
-			"CMAKE_BUILD_TYPE": "Release",
-			"CMAKE_EXPORT_COMPILE_COMMANDS": true,
-			"LLVM_ENABLE_EH": true,
-			"LLVM_ENABLE_RTTI": true
+			"windows":
+			{
+				"command_line_overrides":
+				{
+					"BUILD_SHARED_LIBS": true
+				},
+				"configurations":
+				[
+					"Release"
+				],
+				"generator": "Visual Studio",
+				"build_folder": "${project_path}/../../../../build"
+			},
+			"ctest_command_line_args": "--output-on-failure",
+			"ctest_test_framework": "boost"
 		},
-		"configurations":
-		[
-			"Release",
-			"Debug"
-		],
-		"filter_targets":
-		[
-			"Clara"
-		],
-		"generator": "Ninja",
-		"root_folder": "${project_path}/../../../.."
-	},
+	],
 	"folders":
 	[
 		{
@@ -58,7 +63,7 @@
 			[
 				".git"
 			],
-			"path": "."
+			"path": "../../../.."
 		}
 	],
 	"settings":
@@ -73,8 +78,9 @@
 		"flags_sources":
 		{
 			"file": "compile_commands.json",
-			"search_in": "${project_path}/../../../../build"
+			"search_in": "${project_path}/../../../../build/release"
 		},
+		"compile_commands": "${project_path}/../../../../build/release",
 		"tab_size": 4
 	}
 }
