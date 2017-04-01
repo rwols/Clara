@@ -24,6 +24,13 @@ PYBIND11_PLUGIN(Clara)
         }
     });
 
+    class_<clang::FileSystemOptions>(m, "FileSystemOptions")
+        .def(init<>())
+        .def_readwrite("working_dir", &clang::FileSystemOptions::WorkingDir);
+
+    class_<clang::FileManager>(m, "FileManager")
+        .def(init<const clang::FileSystemOptions &>());
+
     class_<CompilationDatabase>(m, "CompilationDatabase")
         .def(init<const std::string &>())
         .def("get", &CompilationDatabase::operator[]);
