@@ -5,6 +5,8 @@
 #include "SessionOptions.hpp"
 #include <pybind11/stl.h>
 
+PYBIND11_DECLARE_HOLDER_TYPE(T, llvm::IntrusiveRefCntPtr<T>, true);
+
 PYBIND11_PLUGIN(Clara)
 {
     using namespace pybind11;
@@ -28,7 +30,8 @@ PYBIND11_PLUGIN(Clara)
         .def(init<>())
         .def_readwrite("working_dir", &clang::FileSystemOptions::WorkingDir);
 
-    class_<clang::FileManager>(m, "FileManager")
+    class_<clang::FileManager, llvm::IntrusiveRefCntPtr<clang::FileManager>>(
+        m, "FileManager")
         .def(init<const clang::FileSystemOptions &>());
 
     class_<CompilationDatabase>(m, "CompilationDatabase")
@@ -78,7 +81,8 @@ PYBIND11_PLUGIN(Clara)
     register_exception<Session::ASTFileReadError>(m, "ASTFileReadError");
     register_exception<Session::ASTParseError>(m, "ASTParseError");
 
-    class_<Session>(m, "Session")
+    class_<Session>(m, "Session", "Holds a unique pointer to the \"translation\
+ unit\" of the implementation file of the sublime.View object.")
         .def(init<const SessionOptions &>())
         .def("codeComplete", &Session::codeComplete)
         .def("codeCompleteAsync", &Session::codeCompleteAsync)
