@@ -2,55 +2,218 @@
 	"build_systems":
 	[
 		{
-			"name": "Clara",
-			"target": "cmake_build",
-			"generator": "Ninja",
-			"source_folder": "${project_path}/../../../..",
-			"build_folder": "${project_path}/../../../../build/release",
-			"command_line_overrides":
-			{
-				"BUILD_SHARED_LIBS": false,
-				"CMAKE_BUILD_TYPE": "Release",
-				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
-				"LLVM_ENABLE_EH": true,
-				"LLVM_ENABLE_RTTI": true
-			},
+			"file_regex": "(.+[^:]):(\\d+):(\\d+): (?:fatal )?((?:error|warning): .+)$",
+			"name": "Clara - (OSX)",
+			"shell_cmd": "cmake --build .",
+			"syntax": "Packages/CMakeBuilder/Syntax/Ninja.sublime-syntax",
 			"variants":
 			[
 				{
-					"name": "Configure",
-					"configure": true,
+					"name": "tools/clang/tools/Clara/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/install/local"
 				},
 				{
-					"name": "Build Target...",
-					"select": true
+					"name": "tools/clang/tools/Clara/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/install/strip"
 				},
 				{
-					"name": "Clear Cache",
-					"clear_cache": true
+					"name": "tools/clang/tools/Clara/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/install"
 				},
 				{
-					"name": "Run CTest",
-					"run_ctest": true,
+					"name": "tools/clang/tools/Clara/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/plugin/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/plugin/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/lib/pybind11/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/lib/pybind11/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/include/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/include/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/list_install_components"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/test/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/package"
+				},
+				{
+					"name": "ClaraInstall",
+					"shell_cmd": "cmake --build . --target ClaraInstall"
+				},
+				{
+					"name": "ClaraPlugin",
+					"shell_cmd": "cmake --build . --target ClaraPlugin"
 				}
 			],
-			"windows":
-			{
-				"command_line_overrides":
-				{
-					"BUILD_SHARED_LIBS": true
-				},
-				"configurations":
-				[
-					"Release"
-				],
-				"generator": "Visual Studio",
-				"build_folder": "${project_path}/../../../../build"
-			},
-			"ctest_command_line_args": "--output-on-failure",
-			"ctest_test_framework": "boost"
-		},
+			"working_dir": "${project_path}/../../../../build/release"
+		}
 	],
+	"cmake":
+	{
+		"build_folder": "${project_path}/../../../../build/release",
+		"command_line_overrides":
+		{
+			"BUILD_SHARED_LIBS": false,
+			"CMAKE_BUILD_TYPE": "Release",
+			"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+			"LLVM_ENABLE_EH": true,
+			"LLVM_ENABLE_RTTI": true
+		},
+		"filter_targets":
+		[
+			"Clara"
+		],
+		"generator": "Ninja",
+		"root_folder": "${project_path}/../../../..",
+		"windows":
+		{
+			"configurations":
+			[
+				"Release"
+			],
+			"generator": "Visual Studio"
+		}
+	},
 	"folders":
 	[
 		{
@@ -74,13 +237,13 @@
 			"format_on_save": true
 		},
 		"build_on_save": 0,
+		"compile_commands": "${project_path}/../../../../build/release",
 		"filename_filter": "\\.(hpp|cpp)$",
 		"flags_sources":
 		{
 			"file": "compile_commands.json",
 			"search_in": "${project_path}/../../../../build/release"
 		},
-		"compile_commands": "${project_path}/../../../../build/release",
 		"tab_size": 4
 	}
 }
