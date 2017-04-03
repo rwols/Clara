@@ -48,12 +48,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             col, None)
 
     def on_post_save(self):
-        if not self.session:
-            # Attempt to load a session now.
-            # Maybe we had a temporary buffer, or maybe the compilation database
-            # has been updated in the mean time. These issues may be fixed now.
-            self._init_session_on_another_thread()
-        elif self.session_is_loaded:
+        if self.session_is_loaded:
             thread = threading.Thread(target=self._reparse)
             basename = os.path.basename(self.view.file_name())
             ProgressIndicator(thread, self.view.file_name(), 

@@ -1,5 +1,5 @@
 from .code_completer import CodeCompleter
-from ..utils.Functions import ensure_compilation_database_exists_for_view
+from ..utils.Functions import ensure_compilation_database_exists_for_view, clara_print
 import sublime_plugin
 
 class CompilationDatabaseWatcher(sublime_plugin.EventListener):
@@ -22,4 +22,5 @@ class CompilationDatabaseWatcher(sublime_plugin.EventListener):
             return
         for listener in listeners:
             if isinstance(listener, CodeCompleter):
+                clara_print('calling on_post_save for', listener)
                 listener.on_post_save()
