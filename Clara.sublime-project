@@ -73,7 +73,7 @@
 			"based_on_style": "File",
 			"format_on_save": true
 		},
-		"build_on_save": 1,
+		"build_on_save": 0,
 		"filename_filter": "\\.(hpp|cpp)$",
 		"flags_sources":
 		{
