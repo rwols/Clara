@@ -15,7 +15,7 @@ def verify_platform():
 			.format(sublime.platform(), claraPlatform()))
 
 def clara_print(*messages):
-	if sublime.load_settings(g_CLARA_SETTINGS).get('debug', True):
+	if sublime.active_window().active_view().settings().get('clara_debug', False):
 		with g_printer_lock as lock:
 			print('clara:', *messages)
 

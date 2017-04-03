@@ -1,4 +1,5 @@
-import sublime, sublime_plugin, subprocess, os, shutil
+import sublime, sublime_plugin, subprocess, os, shutil, getpass, socket
+from ..utils.Globals import g_CLARA_SETTINGS
 
 def getFromShell(str):
 	return subprocess.check_output(str, shell=True).decode('utf-8').strip()
@@ -7,29 +8,33 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 
 	def __init__(self, view):
 		super(ClaraInsertDiagnosisCommand, self).__init__(view)
-		self.errorCount = 0
+		self.error_count = 0
 
 	def _command_exists(cmd):
 		return shutil.which(cmd) is not None
 
 	def run(self, edit):
-		self._diagnose(edit)
-		if self.errorCount == 0:
-			self._printLine(edit, '\nEverything seems to be OK!')
+		self.edit = edit
+		self._diagnose()
+		if self.error_count == 0:
+			self._print_line('\n', 'Everything seems to be OK!')
+		else:
+			self._print_line('\n', 'Please fix', str(self.error_count), 
+				'error' if self.error_count == 1 else 'errors')
 
-	def _diagnose(self, edit):
+	def _diagnose(self):
 
 		CLANG = "clang++"
 		SHELL_CMD1 = "clang++ -E -x c++ - -v < /dev/null 2>&1 | awk '/#include <...> search starts here/{f=1;next} /End of search list./{f=0} f'"
 		SHELL_CMD2 = "clang++ -E -x c++ - -v < /dev/null 2>&1 | awk 'BEGIN{FS=\"-resource-dir\"} /-resource-dir/ {print $2}' | awk '{print $1;}'"
 
-		self.errorCount = 0
+		self.error_count = 0
 		
 		clangBinary = getFromShell('which clang++')
 		if clangBinary:
-			self._OK(edit, 'found clang binary at "{}"'.format(clangBinary))
+			self._OK('found clang binary at "{}"'.format(clangBinary))
 		else:
-			self._ERR(edit, 'clang was NOT found')
+			self._ERR('clang was NOT found')
 			return
 		output = subprocess.check_output(SHELL_CMD1, shell=True)
 		output = output.decode('utf-8')
@@ -41,76 +46,64 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 			headers[i] = os.path.abspath(header)
 		builtinHeaders = os.path.abspath(getFromShell(SHELL_CMD2))
 
-		self._OK(edit, 'System headers:')
+		self._OK('System headers:')
 		for header in headers:
-			self._printLine(edit, '\t' + header)
+			self._print_line('  ', header)
 
-		self._OK(edit, 'Builtin headers: ' + builtinHeaders)
+		self._OK('Builtin headers:', builtinHeaders)
 
-		settings = sublime.load_settings('Clara.sublime-settings')
-		if settings.get('system_headers'):
-			self._OK(edit, 'System headers are present in User settings.')
+		settings = sublime.load_settings(g_CLARA_SETTINGS)
+		key = '{}@{}'.format(getpass.getuser(), socket.gethostname())
+		headersdict = settings.get(key, None)
+		if headersdict:
+			self._OK(key, 'is present in settings.')
 		else:
-			self._ERR(edit, 'System headers are NOT set in User settings. Please run the command "Generate System Headers" from the command palette to fix this.')
-		if settings.get('builtin_headers'):
-			self._OK(edit, 'Builtin headers are present in User settings.')
+			self._ERR('NO headers found for', key)
+		if isinstance(headersdict['system_headers'], list):
+			self._OK('system_headers key is present.')
 		else:
-			self._ERR(edit, 'Builtin headers are NOT set in User settings. Please run the command "Generate System Headers" from the command palette to fix this.')
-
+			self._ERR('Missing system_headers key!')
+			self._print_line('You should run the command "Clara: Generate System Headers" from the command palette.')
+		if isinstance(headersdict['system_frameworks'], list):
+			self._OK('system_frameworks key is present.')
+		else:
+			self._ERR('Missing system_frameworks key!')
+			self._print_line('You should run the command "Clara: Generate System Headers" from the command palette.')
 		project = self.view.window().project_data()
-		projectFilename = self.view.window().project_file_name()
-
-		if projectFilename:
-			self._OK(edit, 'Found project "{}"'.format(projectFilename))
+		project_file_name = self.view.window().project_file_name()
+		if project_file_name:
+			self._OK('Found project', project_file_name)
 		else:
-			self._ERR(edit, 'Did NOT find a sublime-project file.')
-			return
-
-		if not project:
-			self._ERR(edit, 'Could not open file "{}"'.format(projectFilename))
-			return
-
-		cmakeSettings = project['cmake']
-
-		if cmakeSettings:
-			cmakeSettings = sublime.expand_variables(cmakeSettings, self.view.window().extract_variables())
-			# cmakeFile = cmakeSettings['cmake_file']
-			buildFolder = cmakeSettings['build_folder']
-			# if cmakeFile:
-			# 	self._OK(edit, 'Found CMake file: ' + cmakeFile)
-			# else:
-			# 	self._ERR(edit, 'No cmake_file present in clara settings of ' + projectFilename)
-			if buildFolder:
-				self._OK(edit, 'Found CMake build folder "{}"'.format(buildFolder))
-
-				COMPILE_COMMANDS = 'compile_commands.json'
-				compileCommands = os.path.join(buildFolder, COMPILE_COMMANDS)
-				if os.path.isfile(compileCommands):
-					self._OK(edit, 'Found {} in {}'.format(COMPILE_COMMANDS, buildFolder))
-				else:
-					self._ERR(edit, 'Did NOT find "{}" in the build folder "{}".\n\
-Clara needs this file to know exactly which compiler arguments are passed to \
-each individual source file for correct auto-completion. \
-Make sure to have the line "set(CMAKE_EXPORT_COMPILE_COMMANDS ON)" in \
-your top-level CMakeLists.txt file, or pass it as a command line argument \
-to your cmake invocation. Alternatively, perhaps you still need to configure \
-your cmake project.'.format(COMPILE_COMMANDS, buildFolder))
-					return
-
-				os.path.isfile(os.path.join(buildFolder, "compile_commands.json"));
-
+			self._ERR('Did NOT find a sublime-project file.')
+			self._print_line('You should open or create a sublime-project file.')
+		settings = self.view.settings()
+		compile_commands = settings.get('compile_commands', None)
+		if compile_commands:
+			compile_commands = sublime.expand_variables(compile_commands, self.view.window().extract_variables())
+			self._OK('Found "compile_commmands":', compile_commands)
+			if os.path.isdir(compile_commands):
+				self._OK(compile_commands, 'is a directory.')
 			else:
-				self._ERR(edit, 'No build_folder present in clara settings of ' + projectFilename)
+				self._ERR(compile_commands, 'is NOT a directory.')
+				self._print_line('Make sure you have entered the directory where your build artifacts are created.')
+			path = os.path.join(compile_commands, 'compile_commands.json')
+			if os.path.isfile(path):
+				self._OK(path, 'is a file.')
+			else:
+				self._ERR(path, 'is NOT a file.')
+				self._print_line('Make sure you export your compilation commands with your build system.')
 		else:
-			self._ERR(edit, 'No cmake settings found in ' + projectFilename)
+			self._ERR('No "compile_commands" settings found in ' + project_file_name)
+			self._print_line('Please provide a "compile_commands" setting in the "settings" dictionary of your sublime-project file.')
+			self._print_line('The value should be the directory where compile_commands.json lives.')
 			return
 
-	def _printLine(self, edit, str):
-		self.view.insert(edit, self.view.size(), str + '\n')
+	def _print_line(self, *entries):
+		self.view.insert(self.edit, self.view.size(), ' '.join(entries) + '\n')
 
-	def _OK(self, edit, str):
-		self._printLine(edit, '\n\u2705 ' + str)
+	def _OK(self, *entries):
+		self._print_line('\u2705', *entries)
 
-	def _ERR(self, edit, str):
-		self._printLine(edit, '\n\u274C ' + str)
-		self.errorCount += 1
+	def _ERR(self, *entries):
+		self._print_line('\u274C', *entries)
+		self.error_count += 1

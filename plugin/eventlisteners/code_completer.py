@@ -50,19 +50,20 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
     def on_post_save(self):
         if self.session_is_loaded:
             thread = threading.Thread(target=self._reparse)
-            basename = os.path.basename(self.view.file_name())
-            ProgressIndicator(thread, self.view.file_name(), 
-              "Reparsing {}".format(basename), "Reparsed {}".format(basename))
+            # basename = os.path.basename(self.view.file_name())
+            # ProgressIndicator(thread, self.view.file_name(), 
+            #   "Reparsing {}".format(basename), "Reparsed {}".format(basename))
             thread.start()
 
     def _init_session_on_another_thread(self):
         thread = threading.Thread(target=self._init_session)
-        basename = os.path.basename(self.view.file_name())
-        ProgressIndicator(thread, self.view.file_name(), 
-            "Parsing {}".format(basename), "Parsed {}".format(basename))
+        # basename = os.path.basename(self.view.file_name())
+        # ProgressIndicator(thread, self.view.file_name(), 
+        #     "Parsing {}".format(basename), "Parsed {}".format(basename))
         thread.start()
 
     def _init_session(self):
+        self.view.set_status('clara', 'Parsing...')
         compdb = get_compilation_database_for_view(self.view)
         if not compdb:
             clara_print('no compilation database for', self.view.file_name())
@@ -116,6 +117,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             clara_print('loaded', self.view.file_name())
         except ASTParseError as e:
             clara_print(str(e))
+        self.view.erase_status('clara')
 
     def _load_headers(self):
         username = getpass.getuser()
