@@ -14,12 +14,10 @@ def verify_platform():
 			"Sublime's platform is {} while Clara's platform is {}."
 			.format(sublime.platform(), claraPlatform()))
 
-def clara_print(message):
+def clara_print(*messages):
 	if sublime.load_settings(g_CLARA_SETTINGS).get('debug', True):
 		with g_printer_lock as lock:
-			print('Clara: {}'.format(message))
-			# t = datetime.datetime.fromtimestamp(time.time()).strftime('%X')
-			# print('Clara:{}: {}'.format(t, message))
+			print('clara:', *messages)
 
 def is_implementation_file(file_name):
 	extension = os.path.splitext(file_name)[1]
