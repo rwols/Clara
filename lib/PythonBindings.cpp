@@ -40,6 +40,8 @@ PYBIND11_PLUGIN(Clara)
 
     class_<SessionOptions>(m, "SessionOptions")
         .def(init<>())
+        .def_readwrite("file_manager", &SessionOptions::fileManager,
+                       "The project-wide opaque FileManager object.")
         .def_readwrite("diagnosticCallback",
                        &SessionOptions::diagnosticCallback,
                        "The diagnostic callable handling diagnostic callbacks.")

@@ -63,13 +63,19 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         thread.start()
 
     def _init_session(self):
-        self.view.set_status('clara', 'Parsing...')
+        if is_header_file(self.view.file_name()):
+            clara_print(self.view.file_name(), 'is a header file, skipping.')
+            return
+        self.view.set_status('~clara', 'Parsing...')
         compdb = get_compilation_database_for_view(self.view)
         if not compdb:
             clara_print('no compilation database for', self.view.file_name())
             return
         options = SessionOptions()
-        options.invocation, options.workingDirectory = compdb.get(self.view.file_name())
+        fsopts = FileSystemOptions()
+        options.invocation, fsopts.working_dir = compdb.get(self.view.file_name())
+        options.file_manager = FileManager(fsopts)
+        
         options.builtinHeaders = os.path.join(sublime.packages_path(), 'Clara', 'include')
         headers_dict = self._load_headers()
         if headers_dict:
@@ -117,7 +123,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             clara_print('loaded', self.view.file_name())
         except ASTParseError as e:
             clara_print(str(e))
-        self.view.erase_status('clara')
+        self.view.erase_status('~clara')
 
     def _load_headers(self):
         username = getpass.getuser()
@@ -167,7 +173,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             return
         if file_name != self.view.file_name():
             return
-        print(row, column, severity, message)
+        print(file_name, row, column, severity, message)
         point = self.view.text_point(row - 1, col - 1)
         region = sublime.Region(point, point)
         message = replace_single_quotes_by_tag(message, 'b')
@@ -177,12 +183,14 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         self.phantom_set.update(self.phantoms)
 
     def _reparse(self):
-        clara_print('reparsing', self.view.file_name())
         self.session_is_loaded = False
+        clara_print('reparsing', self.view.file_name())
+        self.view.set_status('~clara', 'Reparsing...')
         if not self.session.reparse():
-            clara_print('error during parsing of', self.view.file_name(), 
-                'this session is disabled.')
             self.session = None
+            sublime.error_message('An error occurred during reparsing of this file for auto-completions. The auto-completion session will be disabled.')
+            self.view.erase_status('~clara')
             return
         self.session_is_loaded = True
         clara_print('reparsed', self.view.file_name())
+        self.view.erase_status('~clara')

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PyBind11.hpp"
+#include <clang/Basic/FileManager.h>
 #include <clang/Frontend/LangStandard.h>
 #include <iosfwd>
 #include <string>
@@ -11,8 +12,12 @@ namespace Clara
 
 class DiagnosticConsumer;
 
+/**
+ * @brief      A structure passed to a Session object
+ */
 struct SessionOptions
 {
+    clang::IntrusiveRefCntPtr<clang::FileManager> fileManager;
     pybind11::object logCallback;
     pybind11::object codeCompleteCallback;
     pybind11::object diagnosticCallback;

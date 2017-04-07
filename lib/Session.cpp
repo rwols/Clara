@@ -32,8 +32,10 @@ Session::Session(const SessionOptions &options)
     std::unique_lock<std::mutex> constructLock(mMethodMutex);
     pybind11::gil_scoped_release releaser;
 
-    mFileOpts.WorkingDir = mOptions.workingDirectory;
-    mFileMgr = new FileManager(mFileOpts);
+    mFileMgr = mOptions.fileManager;
+
+    // mFileOpts.WorkingDir = mOptions.workingDirectory;
+    // mFileMgr = new FileManager(mFileOpts);
     // TODO: Uncomment these lines someday...
     // llvm::sys::fs::file_status astStatus, fileStatus;
     // llvm::sys::fs::status(mOptions.filename, fileStatus);
@@ -78,8 +80,9 @@ Session::Session(const SessionOptions &options)
 
     auto invocation =
         std::shared_ptr<CompilerInvocation>(createInvocationFromOptions());
+
     mUnit = ASTUnit::LoadFromCompilerInvocation(
-        invocation, mPchOps, mDiags, mFileMgr.get(),
+        invocation, mPchOps, mDiags, mOptions.fileManager.get(),
         /*OnlyLocalDecls*/ false,
         /*CaptureDiagnostics*/ false,
         /*PrecompilePreambleAfterNParses*/ 2,
@@ -151,7 +154,7 @@ clang::CompilerInvocation *Session::createInvocationFromOptions()
         if (invocation)
         {
             invocation->getFileSystemOpts().WorkingDir =
-                mOptions.workingDirectory;
+                mFileMgr->getFileSystemOpts().WorkingDir;
             // mFileOpts.WorkingDir = mOptions.workingDirectory;
             fillInvocationWithStandardHeaderPaths(invocation.get());
             return invocation.release();

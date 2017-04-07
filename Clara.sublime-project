@@ -3,7 +3,7 @@
 	[
 		{
 			"file_regex": "(.+[^:]):(\\d+):(\\d+): (?:fatal )?((?:error|warning): .+)$",
-			"name": "Clara - (OSX)",
+			"name": "Clara (OSX)",
 			"shell_cmd": "cmake --build .",
 			"syntax": "Packages/CMakeBuilder/Syntax/Ninja.sublime-syntax",
 			"variants":

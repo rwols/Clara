@@ -24,11 +24,9 @@ void CodeCompleteConsumer::ProcessCodeCompleteResults(
     mResultList.clear();
     mResultList.reserve(numResults);
 
-    // FIXME: Do we need to sort the completions by priority or is it sufficient
-    // if Sublime does the sorting via its fuzzy matching algorithm?
     std::sort(results, results + numResults,
               [](const auto &lhs, const auto &rhs) {
-                  return lhs.Priority > rhs.Priority;
+                  return lhs.Priority < rhs.Priority;
               });
 
     for (unsigned i = 0; i < numResults; ++i)
