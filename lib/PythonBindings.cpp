@@ -42,42 +42,45 @@ PYBIND11_PLUGIN(Clara)
         .def(init<>())
         .def_readwrite("file_manager", &SessionOptions::fileManager,
                        "The project-wide opaque FileManager object.")
-        .def_readwrite("diagnosticCallback",
+        .def_readwrite("diagnostic_callback",
                        &SessionOptions::diagnosticCallback,
                        "The diagnostic callable handling diagnostic callbacks.")
         .def_readwrite(
-            "logCallback", &SessionOptions::logCallback,
+            "log_callback", &SessionOptions::logCallback,
             "A callable python object that accepts strings as single argument.")
         .def_readwrite(
-            "codeCompleteCallback", &SessionOptions::codeCompleteCallback,
+            "code_complete_callback", &SessionOptions::codeCompleteCallback,
             "A callable python object that accepts a list of pairs of strings.")
-        .def_readwrite("filename", &SessionOptions::filename,
+        .def_readwrite("file_name", &SessionOptions::filename,
                        "The filename of the session.")
-        .def_readwrite("systemHeaders", &SessionOptions::systemHeaders,
+        .def_readwrite("system_headers", &SessionOptions::systemHeaders,
                        "The system headers for the session.")
         .def_readwrite(
             "frameworks", &SessionOptions::frameworks,
             "The list of directories where OSX system frameworks reside.")
-        .def_readwrite("builtinHeaders", &SessionOptions::builtinHeaders,
+        .def_readwrite("builtin_headers", &SessionOptions::builtinHeaders,
                        "The builtin headers for the session.")
-        .def_readwrite("astFile", &SessionOptions::astFile,
+        .def_readwrite("ast_file", &SessionOptions::astFile,
                        "The AST file corresponding to this filename.")
         .def_readwrite("invocation", &SessionOptions::invocation,
                        "The command line arguments for this translation unit.")
+
+        // obsolete?
         .def_readwrite(
-            "workingDirectory", &SessionOptions::workingDirectory,
+            "working_dir", &SessionOptions::workingDirectory,
             "The working directory for the command line arguments in "
             "the invocation.")
+
         .def_readwrite(
-            "languageStandard", &SessionOptions::languageStandard,
+            "language_standard", &SessionOptions::languageStandard,
             "The language standard (lang_cxx11, lang_cxx14, lang_cxx1z)")
-        .def_readwrite("codeCompleteIncludeMacros",
+        .def_readwrite("code_complete_include_macros",
                        &SessionOptions::codeCompleteIncludeMacros)
-        .def_readwrite("codeCompleteIncludeCodePatterns",
+        .def_readwrite("code_complete_include_code_patterns",
                        &SessionOptions::codeCompleteIncludeCodePatterns)
-        .def_readwrite("codeCompleteIncludeGlobals",
+        .def_readwrite("code_complete_include_globals",
                        &SessionOptions::codeCompleteIncludeGlobals)
-        .def_readwrite("codeCompleteIncludeBriefComments",
+        .def_readwrite("code_complete_include_brief_comments",
                        &SessionOptions::codeCompleteIncludeBriefComments);
 
     register_exception<Session::ASTFileReadError>(m, "ASTFileReadError");
@@ -86,11 +89,21 @@ PYBIND11_PLUGIN(Clara)
     class_<Session>(m, "Session", "Holds a unique pointer to the \"translation\
  unit\" of the implementation file of the sublime.View object.")
         .def(init<const SessionOptions &>())
-        .def("codeComplete", &Session::codeComplete)
-        .def("codeCompleteAsync", &Session::codeCompleteAsync)
+        .def("code_complete", &Session::codeComplete)
+        .def("code_complete_async", &Session::codeCompleteAsync)
         .def("reparse", &Session::reparse)
         .def("filename", &Session::getFilename)
         .def("save", &Session::save)
+        .def("set_code_complete_include_macros",
+             &Session::setCodeCompleteIncludeMacros)
+        .def("set_code_complete_include_code_patterns",
+             &Session::setCodeCompleteIncludeCodePatterns)
+        .def("set_code_complete_include_globals",
+             &Session::setCodeCompleteIncludeGlobals)
+        .def("set_code_complete_include_brief_comments",
+             &Session::setCodeCompleteIncludeBriefComments)
+        .def("set_code_complete_include_optional_arguments",
+             &Session::setCodeCompleteIncludeOptionalArguments)
         .def("__repr__", [](const Session &session) {
             std::string result("<Clara.Session object for file \"");
             result.append(session.getFilename()).append("\">");

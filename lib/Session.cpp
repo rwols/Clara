@@ -335,6 +335,27 @@ void Session::save() const
     mUnit->Save(mOptions.astFile);
 }
 
+void Session::setCodeCompleteIncludeMacros(const bool b)
+{
+    mOptions.codeCompleteIncludeMacros = b;
+}
+void Session::setCodeCompleteIncludeCodePatterns(const bool b)
+{
+    mOptions.codeCompleteIncludeCodePatterns = b;
+}
+void Session::setCodeCompleteIncludeGlobals(const bool b)
+{
+    mOptions.codeCompleteIncludeGlobals = b;
+}
+void Session::setCodeCompleteIncludeBriefComments(const bool b)
+{
+    mOptions.codeCompleteIncludeBriefComments = b;
+}
+void Session::setCodeCompleteIncludeOptionalArguments(const bool b)
+{
+    mOptions.codeCompleteIncludeOptionalArguments = b;
+}
+
 const std::string &Session::getFilename() const noexcept
 {
     return mOptions.filename;

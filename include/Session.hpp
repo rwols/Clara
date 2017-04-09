@@ -105,6 +105,12 @@ class Session
      */
     void save() const;
 
+    void setCodeCompleteIncludeMacros(const bool b);
+    void setCodeCompleteIncludeCodePatterns(const bool b);
+    void setCodeCompleteIncludeGlobals(const bool b);
+    void setCodeCompleteIncludeBriefComments(const bool b);
+    void setCodeCompleteIncludeOptionalArguments(const bool b);
+
     void report(const char *message) const;
 
   private:

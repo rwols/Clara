@@ -98,9 +98,9 @@ void DiagnosticConsumer::doCallback(const char *filename, const char *severity,
     {
         mCallback(filename, severity, row, column, message);
     }
-    catch (const std::exception &err)
+    catch (const pybind11::error_already_set &err)
     {
-        // oops... now what?
+        pybind11::print(err.what());
     }
 }
 
