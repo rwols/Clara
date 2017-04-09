@@ -163,8 +163,8 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         self.view.run_command('hide_auto_complete')
         self.view.run_command('auto_complete', {
             'disable_auto_insert': True,
-            'api_completions_only': True,
-            'next_completion_if_showing': True})
+            'api_completions_only': False,
+            'next_completion_if_showing': False})
 
     def _diagnostic_callback(self, file_name, severity, row, column, message):
         if severity == 'begin':

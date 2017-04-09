@@ -24,11 +24,17 @@
 	"include_brief_comments": false,
 
 	// Wether to include optional arguments of functions and methods in
-	// auto-complet suggestions.
+	// auto-complete suggestions.
 	"include_optional_arguments": true,
 
 	// If "debug" is true, then debug prints are written to the Python console.
 	// If "debug" is false, no output is written to the Python console. The
 	// status bar messages in the status bar are present irregardless.
 	"debug": false,
+
+	// Don't show word completions.
+	"inhibit_word_completions": true,
+
+	// Don't show completions from snippet and completion files.
+	"inhibit_explicit_completions": false
 }
