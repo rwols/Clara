@@ -1,3 +1,6 @@
 - Change to ViewEventListener.
 - Remove a lot of redundant code.
 - Stylize the completion results a bit more functional looking.
+- Rename "Generate System Headers" command to "Write System Headers".
+- Rename "Create Auto Complte Triggers" command to "Write Auto Complete 
+  Triggers".
