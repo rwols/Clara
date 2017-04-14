@@ -177,8 +177,44 @@
 					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/test/package"
 				},
 				{
+					"name": "tools/clang/tools/Clara/deploy/install/local",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install/local"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/rebuild_cache",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/rebuild_cache"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/package_source",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/package_source"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/package",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/package"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/install/strip",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install/strip"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/install",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/install"
+				},
+				{
+					"name": "tools/clang/tools/Clara/deploy/list_install_components",
+					"shell_cmd": "cmake --build . --target tools/clang/tools/Clara/deploy/list_install_components"
+				},
+				{
+					"name": "ClaraDeploy",
+					"shell_cmd": "cmake --build . --target ClaraDeploy"
+				},
+				{
 					"name": "ClaraInstall",
 					"shell_cmd": "cmake --build . --target ClaraInstall"
+				},
+				{
+					"name": "ClaraPackage",
+					"shell_cmd": "cmake --build . --target ClaraPackage"
 				},
 				{
 					"name": "ClaraPlugin",

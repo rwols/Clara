@@ -1,0 +1,3 @@
+- Change to ViewEventListener.
+- Remove a lot of redundant code.
+- Stylize the completion results a bit more functional looking.

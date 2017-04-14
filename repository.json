@@ -13,12 +13,21 @@
           "sublime_text": ">=3000"
         }, 
         {
-          "date": "2017-03-08 14:34:01", 
+          "date": "2017-04-09 23:49:58", 
           "platforms": [
             "osx-x64"
           ], 
           "version": "0.2.0", 
           "url": "https://github.com/rwols/Clara/releases/download/0.2.0/Clara-0.2.0-Darwin-x64.zip", 
+          "sublime_text": ">=3000"
+        }, 
+        {
+          "date": "2017-04-14 07:03:55", 
+          "platforms": [
+            "osx-x64"
+          ], 
+          "version": "0.3.0", 
+          "url": "https://github.com/rwols/Clara/releases/download/0.3.0/Clara-0.3.0-Darwin-x64.zip", 
           "sublime_text": ">=3000"
         }
       ], 

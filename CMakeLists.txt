@@ -21,7 +21,7 @@
 # At least version 3.2 is needed because we want to use CMake's built-in zip
 # functionality. This is available since version 3.2.
 cmake_minimum_required(VERSION 3.2)
-project(Clara VERSION 0.2.0 LANGUAGES CXX)
+project(Clara VERSION 0.3.0 LANGUAGES CXX)
 
 option(Clara_DEPLOY "Enable deployment to GitHub" OFF)
 

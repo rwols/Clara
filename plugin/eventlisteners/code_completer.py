@@ -120,7 +120,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             settings.add_on_change('include_code_patterns', lambda: self.session.set_code_complete_include_code_patterns(settings.get('include_code_patterns')))
             settings.add_on_change('include_globals', lambda: self.session.set_code_complete_include_globals(settings.get('include_globals')))
             settings.add_on_change('include_brief_comments', lambda: self.session.set_code_complete_include_brief_comments(settings.get('include_brief_comments')))
-            settings.add_on_change('include_optional_arguments', lambda: self.session.set_code_complete_optional_arguments(settings.get('include_optional_arguments')))
+            settings.add_on_change('include_optional_arguments', lambda: self.session.set_code_complete_include_optional_arguments(settings.get('include_optional_arguments')))
             clara_print('loaded', self.view.file_name())
         except ASTFileReadError as e:
             clara_print(str(e))
@@ -138,11 +138,12 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         hostname = socket.gethostname()
         key = '{}@{}'.format(username, hostname)
         settings = sublime.load_settings(g_CLARA_SETTINGS)
+        print(key)
         headers = settings.get(key)
         if headers is not None:
             return headers
-        elif not ViewEventListener.loaded_headers_atleast_once:
-            ViewEventListener.loaded_headers_atleast_once = True
+        elif not CodeCompleter.loaded_headers_atleast_once:
+            CodeCompleter.loaded_headers_atleast_once = True
             if sublime.ok_cancel_dialog('You do not yet have headers set up. '
                 'Do you want to generate them now?'):
                 sublime.run_command('generate_system_headers')
