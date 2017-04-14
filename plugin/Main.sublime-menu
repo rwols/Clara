@@ -1,5 +1,31 @@
 [
 	{
+    "caption": "Tools",
+    "mnemonic": "T",
+    "id": "tools",
+    "children":
+    [
+      { 
+        "caption": "Clara",
+        "mnemonic": "C",
+        "children":
+        [
+          // NOTE: The "captions" for these commands is given by
+          // the `description` method of the respective command.
+          {
+            "command": "clara_write_system_headers",
+            "mnemonic": "S"
+          },
+          {
+            "command": "clara_write_auto_complete_triggers", 
+            "mnemonic": "A" 
+          }
+          
+        ]
+      }
+    ]
+  },
+	{
 		"caption": "Preferences",
 		"id": "preferences",
 		"children": 
@@ -15,21 +41,30 @@
 						"children": 
 						[
 							{
-								"command": "clara_open_settings",
+								"command": "open_url",
+								"args": { "url": "https://github.com/rwols/Clara/wiki/Clara" },
+								"mnemonic": "H",
+								"caption": "Help"
+							},
+							{
+								"command": "edit_settings",
+								"args": { "base_file": "${packages}/Clara/Clara.sublime-settings" },
+								"mnemonic": "S",
 								"caption": "Settings"
-							},
-							{
-								"command": "clara_diagnose",
-								"caption": "Diagnose"
-							},
-							{
-								"command": "clara_generate_system_headers",
-								"caption": "Generate System Headers"
-							},
-							{
-								"command": "clara_create_auto_complete_triggers",
-								"caption": "Create Factory Autocomplete Triggers"
 							}
+							// ,
+							// {
+							// 	"command": "clara_diagnose",
+							// 	"caption": "Diagnose"
+							// },
+							// {
+							// 	"command": "clara_generate_system_headers",
+							// 	"caption": "Generate System Headers"
+							// },
+							// {
+							// 	"command": "clara_create_auto_complete_triggers",
+							// 	"caption": "Create Factory Autocomplete Triggers"
+							// }
 						]
 					}
 				]
