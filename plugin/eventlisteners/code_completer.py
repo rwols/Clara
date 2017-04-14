@@ -138,7 +138,6 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         hostname = socket.gethostname()
         key = '{}@{}'.format(username, hostname)
         settings = sublime.load_settings(g_CLARA_SETTINGS)
-        print(key)
         headers = settings.get(key)
         if headers is not None:
             return headers

@@ -1,5 +1,5 @@
 [
     { "caption": "Clara: Diagnose", "command": "clara_diagnose" },
-	{ "caption": "Clara: Generate System Headers", "command": "clara_generate_system_headers" },
-	{ "caption": "Clara: Create Auto-Complete Triggers", "command": "clara_create_auto_complete_triggers" }
+	{ "caption": "Clara: Write System Headers", "command": "clara_write_system_headers" },
+	{ "caption": "Clara: Write Auto-Complete Triggers", "command": "clara_write_auto_complete_triggers" }
 ]

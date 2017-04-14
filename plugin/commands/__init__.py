@@ -1,15 +1,15 @@
-from .create_auto_complete_triggers import ClaraCreateAutoCompleteTriggersCommand
 from .diagnose import ClaraDiagnoseCommand
-from .generate_system_headers import ClaraGenerateSystemHeadersCommand
 from .insert_diagnosis import ClaraInsertDiagnosisCommand
 from .open_settings import ClaraOpenSettingsCommand
+from .write_auto_complete_triggers import ClaraWriteAutoCompleteTriggersCommand
+from .write_system_headers import ClaraWriteSystemHeadersCommand
 
 __all__ = [
-    'ClaraCreateAutoCompleteTriggersCommand', 
     'ClaraDiagnoseCommand', 
-    'ClaraGenerateSystemHeadersCommand', 
     'ClaraInsertDiagnosisCommand', 
-    'ClaraOpenSettingsCommand']
+    'ClaraOpenSettingsCommand',
+    'ClaraWriteAutoCompleteTriggersCommand', 
+    'ClaraWriteSystemHeadersCommand' ]
 
 print('clara:', 'available commmands:')
 for command in __all__:

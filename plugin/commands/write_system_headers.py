@@ -1,7 +1,7 @@
 import sublime, sublime_plugin, subprocess, os, getpass, socket
 
-class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
-    """Generates system header info."""
+class ClaraWriteSystemHeadersCommand(sublime_plugin.ApplicationCommand):
+    """Writes system header info."""
 
     def subprocess(self, cmd):
         if sublime.platform() == 'linux':
@@ -60,4 +60,4 @@ class ClaraGenerateSystemHeadersCommand(sublime_plugin.ApplicationCommand):
             sublime.run_command('clara_open_settings')
 
     def description(self):
-        return 'Generates system headers.'
+        return 'Writes system headers.'
