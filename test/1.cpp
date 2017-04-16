@@ -5,9 +5,10 @@ struct x
 
 int main()
 {
+
     x a;
     x *b;
     b = &a;
 
-    asdf return 0;
+    return 0;
 }

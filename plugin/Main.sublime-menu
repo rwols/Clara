@@ -52,19 +52,6 @@
 								"mnemonic": "S",
 								"caption": "Settings"
 							}
-							// ,
-							// {
-							// 	"command": "clara_diagnose",
-							// 	"caption": "Diagnose"
-							// },
-							// {
-							// 	"command": "clara_generate_system_headers",
-							// 	"caption": "Generate System Headers"
-							// },
-							// {
-							// 	"command": "clara_create_auto_complete_triggers",
-							// 	"caption": "Create Factory Autocomplete Triggers"
-							// }
 						]
 					}
 				]

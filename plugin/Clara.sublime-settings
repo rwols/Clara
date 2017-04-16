@@ -27,10 +27,11 @@
 	// auto-complete suggestions.
 	"include_optional_arguments": true,
 
-	// If "debug" is true, then debug prints are written to the Python console.
-	// If "debug" is false, no output is written to the Python console. The
-	// status bar messages in the status bar are present irregardless.
-	"debug": false,
+	// If "clara_debug" is true, then debug prints are written to the Python 
+	// console. If "clara_debug" is false, no output is written to the Python 
+	// console. The status bar messages in the status bar are present
+	// irregardless.
+	"clara_debug": false,
 
 	// Don't show word completions.
 	"inhibit_word_completions": true,

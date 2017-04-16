@@ -272,6 +272,7 @@
 			"based_on_style": "File",
 			"format_on_save": true
 		},
+		"clara_debug": true,
 		"build_on_save": 0,
 		"compile_commands": "${project_path}/../../../../build/release",
 		"filename_filter": "\\.(hpp|cpp)$",

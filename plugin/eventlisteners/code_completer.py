@@ -177,8 +177,8 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
     def _diagnostic_handler(self, file_name, severity, row, column, message):
         if severity == 'begin':
             clara_print('clearing phantoms for', self.view.file_name())
-            self.phantoms = []
-            self.phantom_set.update(self.phantoms)
+            # self.phantoms = []
+            self.phantom_set.update([])
             return
         if file_name != self.view.file_name():
             return
@@ -187,10 +187,10 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         point = clang_rowcol_to_sublime_point(self.view, row, column)
         region = sublime.Region(point, point)
         message = replace_single_quotes_by_tag(message, 'b')
-        message = '<body id="Clara"><div id="diagnostic" class="{}">{}</div></body>'.format(severity, message)
+        message = '<body id="Clara"><div id="diagnostic" class="{}"><p>{}</p></div></body>'.format(severity, message)
         phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
-        self.phantoms.append(phantom)
-        self.phantom_set.update(self.phantoms)
+        # self.phantoms.append(phantom)
+        self.phantom_set.update([phantom])
         clara_print('updated phantom set for', self.view.file_name())
 
     def _reparse(self):
