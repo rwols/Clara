@@ -263,6 +263,18 @@
 				".git"
 			],
 			"path": "../../../.."
+		},
+		{
+			"file_exclude_patterns":
+			[
+				".gitignore",
+				".gitmodules"
+			],
+			"folder_exclude_patterns":
+			[
+				".git"
+			],
+			"path": "."
 		}
 	],
 	"settings":

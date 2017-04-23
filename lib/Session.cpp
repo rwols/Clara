@@ -148,14 +148,25 @@ clang::CompilerInvocation *Session::createInvocationFromOptions()
     if (!mOptions.invocation.empty())
     {
         std::vector<const char *> commandLine;
+        bool skipNext = true;
         for (const auto &str : mOptions.invocation)
-            commandLine.push_back(str.c_str());
+            if (skipNext)
+            {
+                skipNext = false;
+            }
+            else if (str == "-include")
+            {
+                skipNext = true;
+            }
+            else
+            {
+                commandLine.push_back(str.c_str());
+            }
         invocation = createInvocationFromCommandLine(commandLine, mDiags);
         if (invocation)
         {
             invocation->getFileSystemOpts().WorkingDir =
                 mFileMgr->getFileSystemOpts().WorkingDir;
-            // mFileOpts.WorkingDir = mOptions.workingDirectory;
             fillInvocationWithStandardHeaderPaths(invocation.get());
             return invocation.release();
         }
