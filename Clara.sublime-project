@@ -222,6 +222,28 @@
 				}
 			],
 			"working_dir": "${project_path}/../../../../build/release"
+		},
+		{
+			"file_regex": "(.+[^:]):(\\d+):(\\d+): (?:fatal )?((?:error|warning): .+)$",
+			"name": "Clara (Linux)",
+			"shell_cmd": "cmake --build .",
+			"syntax": "Packages/CMakeBuilder/Syntax/Ninja.sublime-syntax",
+			"variants":
+			[
+				{
+					"name": "Clara",
+					"shell_cmd": "cmake --build . --target Clara"
+				},
+				{
+					"name": "ClaraInstall",
+					"shell_cmd": "cmake --build . --target ClaraInstall"
+				},
+				{
+					"name": "ClaraPlugin",
+					"shell_cmd": "cmake --build . --target ClaraPlugin"
+				}
+			],
+			"working_dir": "${project_path}/../../../../build/release"
 		}
 	],
 	"cmake":
@@ -284,8 +306,8 @@
 			"based_on_style": "File",
 			"format_on_save": true
 		},
-		"clara_debug": true,
 		"build_on_save": 0,
+		"clara_debug": true,
 		"compile_commands": "${project_path}/../../../../build/release",
 		"filename_filter": "\\.(hpp|cpp)$",
 		"flags_sources":

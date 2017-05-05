@@ -94,13 +94,13 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             clara_print('no headers!')
             return
         clara_print('loading', self.view.file_name(),'with working directory', 
-            options.working_dir, 'and compiler invocation', 
+            fsopts.working_dir, 'and compiler invocation', 
             str(options.invocation))
         options.diagnostic_callback = self._diagnostic_handler
         options.log_callback = clara_print
         options.code_complete_callback = self._completion_handler
         options.file_name = self.view.file_name()
-        ast_dir = os.path.join(options.working_dir, ".clara")
+        ast_dir = os.path.join(fsopts.working_dir, ".clara")
         options.ast_file = os.path.join(ast_dir, 
             os.path.basename(self.view.file_name()) + ".ast")
         clara_print('The AST working file will be', options.ast_file)
