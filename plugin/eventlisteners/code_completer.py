@@ -12,7 +12,12 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, settings):
-        return 'c++' in settings.get('syntax').lower()
+        syntax = settings.get('syntax')
+        if not syntax:
+            print('syntax is none for', settings)
+            return False
+        else:
+            return 'c++' in syntax.lower()
 
     def __init__(self, view):
         super(CodeCompleter, self).__init__(view)
@@ -25,6 +30,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         self.phantoms = []
         self.phantom_set = sublime.PhantomSet(self.view)
         self.phantom_set.update(self.phantoms)
+        self.phantom_lock = threading.Lock()
         self._init_session_on_another_thread()
 
     def on_query_completions(self, prefix, locations):
@@ -69,10 +75,10 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         if is_header_file(self.view.file_name()):
             clara_print(self.view.file_name(), 'is a header file, skipping.')
             return
-        self.view.set_status('~clara', 'Parsing...')
         compdb = get_compilation_database_for_view(self.view)
         if not compdb:
-            clara_print('no compilation database for', self.view.file_name())
+            sublime.set_status('Could not find a compilation database for {}'.format(self.view.file_name()))
+            print('Could not find a compilation database for', self.view.file_name())
             return
         options = SessionOptions()
         fsopts = FileSystemOptions()
@@ -112,6 +118,8 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
 
         options.code_complete_include_brief_comments = settings.get(
             'include_brief_comments', True)
+
+        self.view.set_status('~clara', 'Parsing...')
 
         try: # Things may go wrong here.
             self.session = Session(options)
@@ -176,14 +184,15 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
 
     def _diagnostic_handler(self, file_name, severity, row, column, message):
         if severity == 'begin':
-            clara_print('clearing phantoms for', self.view.file_name())
-            # self.phantoms = []
+            # clara_print('clearing phantoms for', self.view.file_name())
+            self.phantoms = []
             self.phantom_set.update([])
             return
         if file_name != self.view.file_name():
             return
-        if severity != 'error' and severity != 'warning':
+        if not severity in ('error', 'warning'):
             return
+        print('{}:{}:{}: {}: {}'.format(file_name, row, column, severity, message))
         point = clang_rowcol_to_sublime_point(self.view, row, column)
         region = sublime.Region(point, point)
         message = replace_single_quotes_by_tag(message, 'b')

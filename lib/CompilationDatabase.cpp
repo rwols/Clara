@@ -9,6 +9,10 @@ CompilationDatabase::CompilationDatabase(const std::string &directory)
         directory, errorMsg);
     if (!mDatabase)
         throw std::runtime_error("failed to load compilation database.");
+    if (!errorMsg.empty())
+    {
+        throw std::runtime_error(errorMsg);
+    }
 }
 
 std::tuple<std::vector<std::string>, std::string> CompilationDatabase::
