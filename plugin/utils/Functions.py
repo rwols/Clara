@@ -36,23 +36,26 @@ def get_compilation_database_for_view(view):
 		database = g_compilation_databases[view.window().id()]
 		return database
 	except KeyError as keyError:
-		clara_print('No database found.')
+		clara_print('no database found for', view.file_name())
 		return None
 	except AttributeError as attrError:
 		clara_print('View has no window anymore.')
 		return None
 
+_database_lock = threading.Lock()
+
 def ensure_compilation_database_exists_for_view(view):
-	file_name = view.file_name()
-	if not file_name or not is_implementation_file(file_name):
-		return False
-	window = view.window()
-	if window is None:
-		return False
-	if window.id() not in g_active_windows:
-		g_active_windows.add(window.id())
-		load_compilation_database_for_window(window)
-	return True
+	with _database_lock as lock:
+		file_name = view.file_name()
+		if not file_name or not is_implementation_file(file_name):
+			return False
+		window = view.window()
+		if window is None:
+			return False
+		if window.id() not in g_active_windows:
+			g_active_windows.add(window.id())
+			load_compilation_database_for_window(window)
+		return True
 
 def load_compilation_database_for_window(window):
 	try:
