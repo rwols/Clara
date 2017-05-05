@@ -183,10 +183,10 @@ std::unique_ptr<clang::CompilerInvocation> Session::makeInvocation() const
     using namespace clang;
     auto invocation = std::make_unique<CompilerInvocation>();
     invocation->TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
-    invocation->setLangDefaults(*invocation->getLangOpts(), IK_CXX,
-                                llvm::Triple(invocation->TargetOpts->Triple),
-                                invocation->getPreprocessorOpts(),
-                                mOptions.languageStandard);
+    // invocation->setLangDefaults(*invocation->getLangOpts(), IK_CXX,
+    //                             llvm::Triple(invocation->TargetOpts->Triple),
+    //                             invocation->getPreprocessorOpts(),
+    //                             mOptions.languageStandard);
 
     auto &frontendOpts = invocation->getFrontendOpts();
     frontendOpts.Inputs.emplace_back(
