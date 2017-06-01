@@ -15,12 +15,7 @@
           {
             "command": "clara_write_system_headers",
             "mnemonic": "S"
-          },
-          {
-            "command": "clara_write_auto_complete_triggers", 
-            "mnemonic": "A" 
           }
-          
         ]
       }
     ]

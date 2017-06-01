@@ -1,5 +1,4 @@
 [
     { "caption": "Clara: Diagnose", "command": "clara_diagnose" },
 	{ "caption": "Clara: Write System Headers", "command": "clara_write_system_headers" },
-	{ "caption": "Clara: Write Auto-Complete Triggers", "command": "clara_write_auto_complete_triggers" }
 ]

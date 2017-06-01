@@ -239,8 +239,16 @@
 					"shell_cmd": "cmake --build . --target Clara.so"
 				},
 				{
+					"name": "ClaraDeploy",
+					"shell_cmd": "cmake --build . --target ClaraDeploy"
+				},
+				{
 					"name": "ClaraInstall",
 					"shell_cmd": "cmake --build . --target ClaraInstall"
+				},
+				{
+					"name": "ClaraPackage",
+					"shell_cmd": "cmake --build . --target ClaraPackage"
 				},
 				{
 					"name": "ClaraPlugin",
@@ -250,32 +258,6 @@
 			"working_dir": "${project_path}/../../../../build/release"
 		}
 	],
-	"cmake":
-	{
-		"build_folder": "${project_path}/../../../../build/release",
-		"command_line_overrides":
-		{
-			"BUILD_SHARED_LIBS": false,
-			"CMAKE_BUILD_TYPE": "Release",
-			"CMAKE_EXPORT_COMPILE_COMMANDS": true,
-			"LLVM_ENABLE_EH": true,
-			"LLVM_ENABLE_RTTI": true
-		},
-		"filter_targets":
-		[
-			"Clara"
-		],
-		"generator": "Ninja",
-		"root_folder": "${project_path}/../../../..",
-		"windows":
-		{
-			"configurations":
-			[
-				"Release"
-			],
-			"generator": "Visual Studio"
-		}
-	},
 	"folders":
 	[
 		{
@@ -312,6 +294,32 @@
 		},
 		"build_on_save": 0,
 		"clara_debug": true,
+		"cmake":
+		{
+			"build_folder": "${project_path}/../../../../build/release",
+			"command_line_overrides":
+			{
+				"BUILD_SHARED_LIBS": false,
+				"CMAKE_BUILD_TYPE": "Release",
+				"CMAKE_EXPORT_COMPILE_COMMANDS": true,
+				"LLVM_ENABLE_EH": true,
+				"LLVM_ENABLE_RTTI": true
+			},
+			"filter_targets":
+			[
+				"Clara"
+			],
+			"generator": "Ninja",
+			"root_folder": "${project_path}/../../../..",
+			"windows":
+			{
+				"configurations":
+				[
+					"Release"
+				],
+				"generator": "Visual Studio"
+			}
+		},
 		"compile_commands": "${project_path}/../../../../build/release",
 		"filename_filter": "\\.(hpp|cpp)$",
 		"flags_sources":

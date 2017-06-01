@@ -1,5 +1,9 @@
 
-find_package(git REQUIRED)
+if (CMAKE_VERSION VERSION_LESS 3.6)
+  set(GIT_EXECUTABLE "git")
+else()
+  find_package(git REQUIRED)
+endif()
 
 function(get_git_branch in_repository out_branch)
     execute_process(
