@@ -239,8 +239,20 @@
 					"shell_cmd": "cmake --build . --target Clara"
 				},
 				{
+					"name": "Clara.so",
+					"shell_cmd": "cmake --build . --target Clara.so"
+				},
+				{
+					"name": "ClaraDeploy",
+					"shell_cmd": "cmake --build . --target ClaraDeploy"
+				},
+				{
 					"name": "ClaraInstall",
 					"shell_cmd": "cmake --build . --target ClaraInstall"
+				},
+				{
+					"name": "ClaraPackage",
+					"shell_cmd": "cmake --build . --target ClaraPackage"
 				},
 				{
 					"name": "ClaraPlugin",

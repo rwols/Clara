@@ -29,6 +29,15 @@
           "version": "0.3.0", 
           "url": "https://github.com/rwols/Clara/releases/download/0.3.0/Clara-0.3.0-Darwin-x64.zip", 
           "sublime_text": ">=3000"
+        }, 
+        {
+          "date": "2017-05-29 14:46:03", 
+          "platforms": [
+            "linux-x64"
+          ], 
+          "version": "0.3.0", 
+          "url": "https://github.com/rwols/Clara/releases/download/0.3.0/Clara-0.3.0-Linux-x64.zip", 
+          "sublime_text": ">=3000"
         }
       ], 
       "author": "rwols", 

@@ -32,24 +32,12 @@ def install():
 
 	big_print('Cloning LLVM sources...')
 	execute2(tempdir, 'svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm')
-	# p = subprocess.Popen('svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm', 
-	# 	cwd=tempdir, stdout=subprocess.PIPE, shell=True)
-	# (output, err) = p.communicate()
-	# if err: exit(err)
 
 	big_print('Cloning Clang sources...')
 	execute2(llvmtoolsdir, 'svn co http://llvm.org/svn/llvm-project/llvm/trunk clang')
-	# p = subprocess.Popen('svn co http://llvm.org/svn/llvm-project/llvm/trunk clang', 
-	# 	cwd=llvmtoolsdir, stdout=subprocess.PIPE, shell=True)
-	# (output, err) = p.communicate()
-	# if err: exit(err)
 
 	big_print('Cloning Clara sources...')
 	execute2(clangtoolsdir, 'git clone --recursive https://github.com/rwols/Clara.git')
-	# p = subprocess.Popen('git clone --recursive https://github.com/rwols/Clara.git', 
-	# 	cwd=clangtoolsdir, stdout=subprocess.PIPE, shell=True)
-	# (output, err) = p.communicate()
-	# if err: exit(err)
 
 	big_print('Configuring with CMake in "{}"'.format(builddir))
 	execute2(tempdir, 'cmake -Hllvm -Bllvm-build -DLLVM_ENABLE_RTTI=ON -DLLVM_ENABLE_EH=ON -DCLANG_RESOURCE_DIR=. -DCMAKE_BUILD_TYPE=Release')
