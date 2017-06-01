@@ -30,19 +30,20 @@ def is_header_file(file_name):
 def is_header_or_implementation_file(file_name):
 	return is_implementation_file(file_name) or is_header_file(file_name)
 
+_database_lock = threading.Lock()
+
 def get_compilation_database_for_view(view):
 	try:
 		ensure_compilation_database_exists_for_view(view)
-		database = g_compilation_databases[view.window().id()]
-		return database
+		with _database_lock as lock:
+			database = g_compilation_databases[view.window().id()]
+			return database
 	except KeyError as keyError:
 		clara_print('no database found for', view.file_name())
 		return None
 	except AttributeError as attrError:
 		clara_print('View has no window anymore.')
 		return None
-
-_database_lock = threading.Lock()
 
 def ensure_compilation_database_exists_for_view(view):
 	with _database_lock as lock:
@@ -62,16 +63,6 @@ def load_compilation_database_for_window(window):
 		settings = window.active_view().settings()
 		compile_commands = settings.get('compile_commands')
 		compile_commands = sublime.expand_variables(compile_commands, window.extract_variables())
-		# project = window.project_data()
-		# if project is None: raise Exception(
-		# 	'No sublime-project found for window {}.'.format(window.id()))
-		# cmake = project.get('cmake')
-		# if cmake is None: raise Exception(
-		# 	'No cmake settings found for "{}".'.format(
-		# 		window.project_file_name()))
-		# cmake = sublime.expand_variables(
-		# 	cmake, window.extract_variables())
-		# build_folder = cmake.get('build_folder')
 		if not compile_commands:
 			raise KeyError(
 				'No "compile_commands" key present in settings.'

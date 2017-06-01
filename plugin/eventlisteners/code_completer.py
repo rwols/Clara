@@ -12,12 +12,9 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
 
     @classmethod
     def is_applicable(cls, settings):
-        syntax = settings.get('syntax')
-        if not syntax:
-            print('syntax is none for', settings)
-            return False
-        else:
-            return 'c++' in syntax.lower()
+        compile_commands = settings.get("compile_commands")
+        syntax = settings.get("syntax")
+        return syntax and "C++" in syntax and compile_commands
 
     def __init__(self, view):
         super(CodeCompleter, self).__init__(view)
@@ -27,10 +24,6 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
         self.completions = None
         if not self.view.file_name():
             return
-        self.phantoms = []
-        self.phantom_set = sublime.PhantomSet(self.view)
-        self.phantom_set.update(self.phantoms)
-        self.phantom_lock = threading.Lock()
         self._init_session_on_another_thread()
 
     def on_query_completions(self, prefix, locations):
@@ -42,13 +35,8 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             self.completions = None
             self.point = -1
             return sublime_completion_tuple(completions)
-        if not self.view.match_selector(point, 'source.c++'):
-            return None
-        if '-' in prefix and not '->' in prefix:
-            return None
-        if '>' in prefix and not '->' in prefix:
-            return None
-        if ':' in prefix and not '::' in prefix:
+        if not (self.view.match_selector(point - 1, 'punctuation.accessor') or 
+            self.view.substr(sublime.Region(point - 1, point)) == '.'):
             return None
         clara_print('new auto-completion run at point', point, 'with prefix', prefix)
         row, col = sublime_point_to_clang_rowcol(self.view, point)
@@ -59,16 +47,10 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
     def on_post_save(self):
         if self.session_is_loaded:
             thread = threading.Thread(target=self._reparse)
-            # basename = os.path.basename(self.view.file_name())
-            # ProgressIndicator(thread, self.view.file_name(), 
-            #   "Reparsing {}".format(basename), "Reparsed {}".format(basename))
             thread.start()
 
     def _init_session_on_another_thread(self):
         thread = threading.Thread(target=self._init_session)
-        # basename = os.path.basename(self.view.file_name())
-        # ProgressIndicator(thread, self.view.file_name(), 
-        #     "Parsing {}".format(basename), "Parsed {}".format(basename))
         thread.start()
 
     def _init_session(self):
@@ -77,7 +59,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             return
         compdb = get_compilation_database_for_view(self.view)
         if not compdb:
-            sublime.set_status('Could not find a compilation database for {}'.format(self.view.file_name()))
+            self.view.window().status_message('Could not find a compilation database for {}'.format(self.view.file_name()))
             print('Could not find a compilation database for', self.view.file_name())
             return
         options = SessionOptions()
@@ -153,7 +135,7 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             CodeCompleter.loaded_headers_atleast_once = True
             if sublime.ok_cancel_dialog('You do not yet have headers set up. '
                 'Do you want to generate them now?'):
-                sublime.run_command('generate_system_headers')
+                sublime.run_command('write_system_headers')
                 return settings.get(key)
             else:
                 sublime.error_message(
@@ -183,24 +165,11 @@ class CodeCompleter(sublime_plugin.ViewEventListener):
             'next_completion_if_showing': False})
 
     def _diagnostic_handler(self, file_name, severity, row, column, message):
-        if severity == 'begin':
-            # clara_print('clearing phantoms for', self.view.file_name())
-            self.phantoms = []
-            self.phantom_set.update([])
-            return
         if file_name != self.view.file_name():
             return
         if not severity in ('error', 'warning'):
             return
         print('{}:{}:{}: {}: {}'.format(file_name, row, column, severity, message))
-        point = clang_rowcol_to_sublime_point(self.view, row, column)
-        region = sublime.Region(point, point)
-        message = replace_single_quotes_by_tag(message, 'b')
-        message = '<body id="Clara"><div id="diagnostic" class="{}"><p>{}</p></div></body>'.format(severity, message)
-        phantom = sublime.Phantom(region, message, sublime.LAYOUT_BELOW)
-        # self.phantoms.append(phantom)
-        self.phantom_set.update([phantom])
-        clara_print('updated phantom set for', self.view.file_name())
 
     def _reparse(self):
         self.session_is_loaded = False

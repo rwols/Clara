@@ -1,19 +1,12 @@
 from ..utils.Functions import ensure_compilation_database_exists_for_view
-import sublime_plugin
+import sublime_plugin, sublime
 
 class CompilationDatabaseWatcher(sublime_plugin.EventListener):
 
     def on_new(self, view):
         ensure_compilation_database_exists_for_view(view)
 
-    def on_clone(self, view):
-        self.on_new(view)
-
-    def on_load(self, view):
-        self.on_new(view)
-
-    def on_activated(self, view):
-        self.on_new(view)
+    on_activated = on_load = on_clone = on_new
 
     def on_post_save(self, view):
         listeners = sublime_plugin.view_event_listeners.get(view.id(), None)
