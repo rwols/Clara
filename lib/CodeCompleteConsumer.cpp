@@ -1,4 +1,4 @@
-#include "../include/CodeCompleteConsumer.hpp"
+#include "CodeCompleteConsumer.hpp"
 #include "PyBind11.hpp"
 
 #define DEBUG_PRINT llvm::errs() << __FILE__ << ':' << __LINE__ << '\n'
@@ -13,6 +13,7 @@ CodeCompleteConsumer::CodeCompleteConsumer(
     const clang::CodeCompleteOptions &options)
     : clang::CodeCompleteConsumer(options, false), mCCTUInfo(gCodeCompleteAlloc)
 {
+
     /* empty */
 }
 

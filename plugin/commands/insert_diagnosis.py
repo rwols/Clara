@@ -1,7 +1,6 @@
 import sublime, sublime_plugin, subprocess, os, shutil, getpass, socket
-from ..utils.Globals import g_CLARA_SETTINGS
 
-def getFromShell(str):
+def get_from_shell(str):
 	return subprocess.check_output(str, shell=True).decode('utf-8').strip()
 
 class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
@@ -30,7 +29,7 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 
 		self.error_count = 0
 		
-		clangBinary = getFromShell('which clang++')
+		clangBinary = get_from_shell('which clang++')
 		if clangBinary:
 			self._OK('found clang binary at "{}"'.format(clangBinary))
 		else:
@@ -44,7 +43,7 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 			if header.endswith(' (framework directory)'):
 				header = header[:-len(' (framework directory)')]
 			headers[i] = os.path.abspath(header)
-		builtinHeaders = os.path.abspath(getFromShell(SHELL_CMD2))
+		builtinHeaders = os.path.abspath(get_from_shell(SHELL_CMD2))
 
 		self._OK('System headers:')
 		for header in headers:
@@ -52,7 +51,7 @@ class ClaraInsertDiagnosisCommand(sublime_plugin.TextCommand):
 
 		self._OK('Builtin headers:', builtinHeaders)
 
-		settings = sublime.load_settings(g_CLARA_SETTINGS)
+		settings = sublime.load_settings("Clara.sublime-settings")
 		key = '{}@{}'.format(getpass.getuser(), socket.gethostname())
 		headersdict = settings.get(key, None)
 		if headersdict:

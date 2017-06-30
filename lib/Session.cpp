@@ -101,14 +101,11 @@ Session::Session(const SessionOptions &options)
     }
 
     auto workerLambda = [this]() {
-        report("reporting for duty");
         std::unique_lock<std::mutex> lock(mMethodMutex);
         while (true)
         {
-            report("going to sleep");
             mConditionVar.wait(lock, [this]() { return mViewID != 0; });
             if (mViewID == -1) break;
-            report("woke up, starting completion run");
 
             // reparsing the ASTUnit makes sure that the preamble is up-to-date
             mUnit->Reparse(mPchOps);
@@ -126,7 +123,6 @@ Session::Session(const SessionOptions &options)
             }
             mViewID = 0;
         }
-        report("goodbye!");
     };
 
     mViewID = 0;
@@ -138,7 +134,7 @@ Session::~Session()
 {
     // makes the worker thread stop execution
     mViewID = -1;
-    mConditionVar.notify_one();
+    mConditionVar.notify_all();
 }
 
 clang::CompilerInvocation *Session::createInvocationFromOptions()
@@ -310,7 +306,7 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
     std::unique_lock<std::mutex> methodLock(mMethodMutex, std::try_to_lock);
     if (!methodLock)
     {
-        report("Failed to acquire lock.");
+        report("failed to acquire lock.");
         return;
     }
     if (mViewID != 0)
@@ -322,9 +318,7 @@ void Session::codeCompleteAsync(const int viewID, std::string unsavedBuffer,
     mRow = row;
     mColumn = column;
     mUnsavedBuffer = std::move(unsavedBuffer);
-    report("releasing method lock");
     methodLock.unlock();
-    report("notifying worker thread");
     mConditionVar.notify_one();
 }
 

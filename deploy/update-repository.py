@@ -5,9 +5,9 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--tag', dest='version', type=str, required=True, help='tag for GitHub')
+    parser.add_argument('--tag',      dest='version',  type=str, required=True, help='tag for GitHub')
     parser.add_argument('--platform', dest='platform', type=str, required=True, help='platform for repository.json')
-    parser.add_argument('--zipfile', dest='zipfile', type=str, required=True, help='location of the asset on disk')
+    parser.add_argument('--zipfile',  dest='zipfile',  type=str, required=True, help='location of the asset on disk')
     args = parser.parse_args()
 
     zipfile = os.path.basename(args.zipfile)

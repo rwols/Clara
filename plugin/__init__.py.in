@@ -1,5 +1,13 @@
 __version_info__ = (@PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@)
 __version__ = '@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@'
 
+import sublime
 from .commands import *
 from .eventlisteners import *
+from Clara.Clara import version
+
+def plugin_loaded():
+    if version() > int(sublime.version()):
+        sublime.error_message("Your version of sublime is {} while clara's "
+                              "minimum version is {}. Some things might break."
+                              .format(sublime.version(), Clara.Clara.version()))

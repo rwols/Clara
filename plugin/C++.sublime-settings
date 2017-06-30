@@ -1,3 +1,9 @@
 {
-    "auto_complete_triggers": [ { "characters": ".>:", "selector": "source.c++" } ]
+    "auto_complete_triggers":
+    [
+        {
+            "characters": ".>:", 
+            "selector": "source.c++ - comment - string - constant"
+        }
+    ]
 }
