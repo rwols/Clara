@@ -1,5 +1,6 @@
 #include "CodeCompleter.hpp"
 #include "CompilationDatabaseWatcher.hpp"
+#include "claraPrint.hpp"
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Frontend/Utils.h> // for clang::createInvocationFromCommandLine
 #include <future>
@@ -49,7 +50,7 @@ CodeCompleter::CodeCompleter(pybind11::object view)
                                           false}}
 {
     pybind11::module sublime = pybind11::module::import("sublime");
-    pybind11::print("clara: constructing CodeCompleter");
+    claraPrint(mView, "constructing CodeCompleter");
     mFilename = mView.attr("file_name")().cast<std::string>();
     const auto compileCommand = CompilationDatabaseWatcher::getForView(mView);
     auto command = std::get<0>(compileCommand);
@@ -61,7 +62,7 @@ CodeCompleter::CodeCompleter(pybind11::object view)
     auto settings = sublime.attr("load_settings")("Clara.sublime-settings");
     auto getsetting = settings.attr("get");
     const auto headersKey = getHeadersKey();
-    pybind11::print("clara: loading key", headersKey);
+    claraPrint(mView, "loading key", headersKey);
     auto headersDict = getsetting(headersKey, pybind11::none());
     if (headersDict.is_none())
     {
@@ -70,18 +71,18 @@ CodeCompleter::CodeCompleter(pybind11::object view)
             "). Please set up headers and restart sublime.");
         return;
     }
-    pybind11::print("clara: loading system headers");
+    claraPrint(mView, "loading system headers");
     auto systemHeaders =
         headersDict["system_headers"].cast<std::vector<std::string>>();
-    pybind11::print("clara: loading system frameworks");
+    claraPrint(mView, "loading system frameworks");
     auto systemFrameworks =
         headersDict["system_frameworks"].cast<std::vector<std::string>>();
     llvm::SmallString<64> builtinHeadersTemp =
         llvm::StringRef(sublime.attr("packages_path")().cast<std::string>());
     llvm::sys::path::append(builtinHeadersTemp, "Clara", "include");
     std::string builtinHeaders = builtinHeadersTemp.c_str();
-    pybind11::print("clara: begin parsing main file");
-    pybind11::print(command, systemHeaders, systemFrameworks, builtinHeaders);
+    claraPrint(mView, "begin parsing main file");
+    mView.attr("set_status")("clara", "parsing...");
     mInitThread =
         std::thread{&CodeCompleter::initAST,     this,
                     std::move(command),          std::move(systemHeaders),
@@ -94,6 +95,7 @@ void CodeCompleter::initAST(std::vector<std::string> command,
                             std::string builtinHeaders)
 {
     mFileMgr = new clang::FileManager(mFileOpts);
+    mSourceMgr = new clang::SourceManager(*mDiags, *mFileMgr);
     std::vector<const char *> commandLine;
     bool skipNext = true;
     for (const auto &str : command)
@@ -155,7 +157,8 @@ void CodeCompleter::initAST(std::vector<std::string> command,
     mIsLoaded = true;
     {
         pybind11::gil_scoped_acquire lock;
-        pybind11::print("clara: loaded", mFilename);
+        claraPrint(mView, "loaded", mFilename);
+        mView.attr("erase_status")("clara");
     }
 }
 
@@ -196,13 +199,13 @@ void CodeCompleter::codeCompleteImpl()
     remappedFiles.emplace_back(mFilename, memBuffer.get());
     LangOptions langOpts = mUnit->getLangOpts();
     mDiags->Reset();
-    IntrusiveRefCntPtr<SourceManager> sourceManager(
-        new SourceManager(*mDiags, *mFileMgr));
+    // IntrusiveRefCntPtr<SourceManager> sourceManager(
+    //     new SourceManager(*mDiags, *mFileMgr));
     mUnit->CodeComplete(mFilename, mRow, mColumn, remappedFiles,
                         includeMacros(), includeCodePatterns(),
                         /*includeBriefComments()*/ false, *this, mPchOps,
-                        *mDiags, langOpts, *sourceManager, *mFileMgr,
-                        mStoredDiags, mOwnedBuffers);
+                        *mDiags, langOpts, *mSourceMgr, *mFileMgr, mStoredDiags,
+                        mOwnedBuffers);
 }
 
 void CodeCompleter::addPath(clang::CompilerInvocation *invocation,
@@ -217,7 +220,7 @@ std::vector<std::pair<std::string, std::string>>
 CodeCompleter::onQueryCompletions(pybind11::str prefix,
                                   pybind11::list locations)
 {
-    pybind11::print("clara: start on_query_completions");
+    claraPrint(mView, "start on_query_completions");
     const auto point = locations[0].cast<unsigned>();
     std::vector<std::pair<std::string, std::string>> empty;
     if (mPoint == point || mPoint + 3 == point)
@@ -225,23 +228,23 @@ CodeCompleter::onQueryCompletions(pybind11::str prefix,
         mPoint = (unsigned)-1;
         if (!mCompletions.empty())
         {
-            pybind11::print("clara: returning completions");
+            claraPrint(mView, "returning completions");
             return std::move(mCompletions);
         }
         else
         {
-            pybind11::print("clara: found no completions");
+            claraPrint(mView, "found no completions");
             return empty;
         }
     }
     if (!mIsLoaded)
     {
-        pybind11::print("clara: TU is not yet loaded");
+        claraPrint(mView, "TU is not yet loaded");
         return empty;
     }
     if (pybind11::len(locations) != 1)
     {
-        pybind11::print("clara: too many locations");
+        claraPrint(mView, "too many locations");
         return empty;
     }
     pybind11::module sublime = pybind11::module::import("sublime");
@@ -252,8 +255,8 @@ CodeCompleter::onQueryCompletions(pybind11::str prefix,
     mColumn++;
     auto everything = sublime.attr("Region")(0, mView.attr("size")());
     mUnsavedBuffer = mView.attr("substr")(everything).cast<std::string>();
-    pybind11::print("clara: starting code completion run at row", mRow,
-                    "column", mColumn);
+    claraPrint(mView, "starting code completion run at row", mRow, "column",
+               mColumn);
     mDoCompletionJob = true;
     mConditionVar.notify_one();
     return empty;
@@ -616,7 +619,7 @@ void CodeCompleter::ProcessCodeCompleteString(
 
 void CodeCompleter::onPostSave()
 {
-    pybind11::print("clara: reparsing...");
+    claraPrint(mView, "reparsing...");
     if (mInitThread.joinable()) mInitThread.join();
     mIsLoaded.store(false);
     mInitThread = std::thread{&CodeCompleter::reparse, this};
@@ -631,8 +634,44 @@ void CodeCompleter::reparse()
     mIsLoaded.store(true);
     {
         pybind11::gil_scoped_acquire acquire;
-        pybind11::print("clara: done reparsing");
+        claraPrint(mView, "done reparsing");
     }
+}
+
+void CodeCompleter::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
+                                     const clang::Diagnostic &info)
+{
+    clang::DiagnosticConsumer::HandleDiagnostic(level, info);
+    if (!mSourceMgr->isInMainFile(info.getLocation()))
+    {
+        // not interested in diagnostics that are somewhere outside of the
+        // file that we're looking at.
+        return;
+    }
+    llvm::SmallString<128> message;
+    info.FormatDiagnostic(message);
+    pybind11::print(message.c_str());
+    // const auto presumedLoc = makePresumedLoc(info);
+    // switch (level)
+    // {
+    // case clang::DiagnosticsEngine::Note:
+    //     doCallback("note", presumedLoc, message.c_str());
+    //     break;
+    // case clang::DiagnosticsEngine::Remark:
+    //     doCallback("remark", presumedLoc, message.c_str());
+    //     break;
+    // case clang::DiagnosticsEngine::Warning:
+    //     doCallback("warning", presumedLoc, message.c_str());
+    //     break;
+    // case clang::DiagnosticsEngine::Error:
+    //     doCallback("error", presumedLoc, message.c_str());
+    //     break;
+    // case clang::DiagnosticsEngine::Fatal:
+    //     doCallback("fatal", presumedLoc, message.c_str());
+    //     break;
+    // default:
+    //     break;
+    // }
 }
 
 CodeCompleter::~CodeCompleter()
@@ -645,8 +684,8 @@ CodeCompleter::~CodeCompleter()
     }
     if (mInitThread.joinable())
     {
-        // Joining the init and worker thread can be user-unfriendly. But I do
-        // not know of another way to safely discard these resources.
+        // Joining the init and worker thread can be user-unfriendly. But I
+        // do not know of another way to safely discard these resources.
         mInitThread.join();
     }
     mIsLoaded = false;

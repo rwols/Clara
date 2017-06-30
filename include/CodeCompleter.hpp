@@ -25,10 +25,7 @@ class CodeCompleter : public clang::DiagnosticConsumer,
     CodeCompleter(pybind11::object view);
     ~CodeCompleter() override;
 
-    // is_applicable must be defined in python because it's a @classmethod.
-
-    std::vector<std::pair<std::string, std::string>>
-    onQueryCompletions(pybind11::str prefix, pybind11::list locations);
+    // clang::CodeCompleteConsumer implementation
     clang::CodeCompletionAllocator &getAllocator() override;
     clang::CodeCompletionTUInfo &getCodeCompletionTUInfo() override;
     void ProcessCodeCompleteResults(clang::Sema &sema,
@@ -39,6 +36,15 @@ class CodeCompleter : public clang::DiagnosticConsumer,
         clang::Sema &sema, unsigned currentArg,
         clang::CodeCompleteConsumer::OverloadCandidate *candidates,
         unsigned numCandidates) override;
+
+    // clang::DiagnosticConsumer implementation
+    void HandleDiagnostic(clang::DiagnosticsEngine::Level level,
+                          const clang::Diagnostic &info) override;
+
+    // Methods that will be exported to Python
+    // is_applicable must be defined in python because it's a @classmethod.
+    std::vector<std::pair<std::string, std::string>>
+    onQueryCompletions(pybind11::str prefix, pybind11::list locations);
     void onPostSave();
     void reparse();
 

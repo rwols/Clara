@@ -22,14 +22,9 @@ set(PYTHON_EXECUTABLE python${PYBIND11_PYTHON_VERSION})
 add_subdirectory(pybind11)
 
 set(source_files
-    CodeCompleteConsumer.cpp
     CodeCompleter.cpp
-    CompilationDatabase.cpp
     CompilationDatabaseWatcher.cpp
-    DiagnosticConsumer.cpp
     PythonBindings.cpp
-    Session.cpp
-    SessionOptions.cpp
     )
 
 pybind11_add_module(Clara ${source_files})

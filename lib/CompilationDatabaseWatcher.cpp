@@ -1,4 +1,5 @@
 #include "CompilationDatabaseWatcher.hpp"
+#include "claraPrint.hpp"
 #include <thread>
 
 namespace Clara
@@ -17,17 +18,17 @@ void CompilationDatabaseWatcher::onNew(pybind11::object view)
     if (view.is_none()) return;
     const auto filename = view.attr("file_name")();
     if (filename.is_none()) return;
-    pybind11::print("clara: checking compdb for", filename);
+    claraPrint(view, "checking compdb for", filename);
     auto settings = view.attr("settings")();
     if (settings.is_none())
     {
-        pybind11::print("clara:", filename, "has no settings");
+        claraPrint(view, filename, "has no settings");
         return;
     }
     auto window = view.attr("window")();
     if (window.is_none())
     {
-        pybind11::print("clara:", filename, "has no window associated to it");
+        claraPrint(view, filename, "has no window associated to it");
         return;
     }
     const auto window_id = window.attr("id")().cast<int>();
@@ -37,16 +38,18 @@ void CompilationDatabaseWatcher::onNew(pybind11::object view)
         settings.attr("get")("compile_commands", pybind11::none());
     if (compile_commands.is_none())
     {
-        pybind11::print("clara:", filename,
-                        "does not have compile_commands, skipping");
+        claraPrint(view, filename, "does not have compile_commands, skipping");
         return;
     }
 
     // Check if the view has the correct syntax.
     const auto syntax = settings.attr("get")("syntax", "").cast<std::string>();
-    if (syntax.find("C++") == std::string::npos)
+    if (syntax.find("C++.sublime-syntax") == std::string::npos &&
+        syntax.find("C.sublime-syntax") == std::string::npos &&
+        syntax.find("Objective-C.sublime-syntax") == std::string::npos &&
+        syntax.find("Objective-C++.sublime-syntax") == std::string::npos)
     {
-        pybind11::print("clara:", filename, "does not have the right syntax");
+        claraPrint(view, filename, "does not have the right syntax");
         return;
     }
 
@@ -59,8 +62,7 @@ void CompilationDatabaseWatcher::onNew(pybind11::object view)
         lock.unlock();
         if (std::get<1>(this->getForView(view)).empty())
         {
-            pybind11::print("clara:", filename,
-                            "doesn't have compile commands");
+            claraPrint(view, filename, "doesn't have compile commands");
             return;
         }
         if (!settings.attr("get")("_clara_code_completer", false).cast<bool>())
@@ -69,7 +71,7 @@ void CompilationDatabaseWatcher::onNew(pybind11::object view)
         }
         return;
     }
-    pybind11::print("clara: loading compile commands for", filename);
+    claraPrint(view, "loading compile commands for", filename);
     compile_commands = sublime.attr("expand_variables")(
         compile_commands, window.attr("extract_variables")());
     const auto compilation_dir = compile_commands.cast<std::string>();
@@ -79,18 +81,17 @@ void CompilationDatabaseWatcher::onNew(pybind11::object view)
             compilation_dir, error_message);
     if (!database)
     {
-        pybind11::print("clara: failed to load compilation database for ",
-                        filename);
+        claraPrint(view, "failed to load compilation database for ", filename);
         return;
     }
     if (!error_message.empty())
     {
-        pybind11::print("clara:", error_message);
+        claraPrint(view, error_message);
         return;
     }
     mDatabases.emplace(window_id, std::move(database));
     lock.unlock();
-    pybind11::print("clara: enabling code completer for", filename);
+    claraPrint(view, "enabling code completer for", filename);
     settings.attr("set")("_clara_code_completer", true);
 }
 
