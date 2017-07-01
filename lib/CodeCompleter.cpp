@@ -8,6 +8,7 @@
 #include <llvm/Support/Path.h>
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
+#include <sstream>
 #include <thread>
 
 static std::string getHeadersKey()
@@ -648,30 +649,42 @@ void CodeCompleter::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
         // file that we're looking at.
         return;
     }
+    const auto loc = mSourceMgr->getPresumedLoc(info.getLocation());
+    std::ostringstream ss;
+    if (loc.isValid())
+    {
+        ss << loc.getFilename() << ":" << loc.getLine() << ":"
+           << loc.getColumn() << ": ";
+    }
+    else
+    {
+        ss << "<unknown>: ";
+    }
     llvm::SmallString<128> message;
     info.FormatDiagnostic(message);
-    pybind11::print(message.c_str());
-    // const auto presumedLoc = makePresumedLoc(info);
-    // switch (level)
-    // {
-    // case clang::DiagnosticsEngine::Note:
-    //     doCallback("note", presumedLoc, message.c_str());
-    //     break;
-    // case clang::DiagnosticsEngine::Remark:
-    //     doCallback("remark", presumedLoc, message.c_str());
-    //     break;
-    // case clang::DiagnosticsEngine::Warning:
-    //     doCallback("warning", presumedLoc, message.c_str());
-    //     break;
-    // case clang::DiagnosticsEngine::Error:
-    //     doCallback("error", presumedLoc, message.c_str());
-    //     break;
-    // case clang::DiagnosticsEngine::Fatal:
-    //     doCallback("fatal", presumedLoc, message.c_str());
-    //     break;
-    // default:
-    //     break;
-    // }
+    ss << message.c_str();
+    pybind11::gil_scoped_acquire acquire;
+    pybind11::print(ss.str());
+}
+
+void CodeCompleter::BeginSourceFile(const clang::LangOptions &options,
+                                    const clang::Preprocessor *pp)
+{
+    clang::DiagnosticConsumer::BeginSourceFile(options, pp);
+    pybind11::gil_scoped_acquire acquire;
+    claraPrint(mView, "--- BEGIN DIAGNOSTICS ---");
+}
+void CodeCompleter::EndSourceFile()
+{
+    clang::DiagnosticConsumer::EndSourceFile();
+    pybind11::gil_scoped_acquire acquire;
+    claraPrint(mView, "--- END DIAGNOSTICS ---");
+}
+void CodeCompleter::finish()
+{
+    clang::DiagnosticConsumer::finish();
+    pybind11::gil_scoped_acquire acquire;
+    claraPrint(mView, "finished diagnostics");
 }
 
 CodeCompleter::~CodeCompleter()

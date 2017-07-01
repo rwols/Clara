@@ -40,6 +40,10 @@ class CodeCompleter : public clang::DiagnosticConsumer,
     // clang::DiagnosticConsumer implementation
     void HandleDiagnostic(clang::DiagnosticsEngine::Level level,
                           const clang::Diagnostic &info) override;
+    void BeginSourceFile(const clang::LangOptions &options,
+                         const clang::Preprocessor *pp) override;
+    void EndSourceFile() override;
+    void finish() override;
 
     // Methods that will be exported to Python
     // is_applicable must be defined in python because it's a @classmethod.
