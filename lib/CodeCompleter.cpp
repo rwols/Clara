@@ -240,7 +240,7 @@ CodeCompleter::onQueryCompletions(pybind11::str prefix,
     }
     if (!mIsLoaded)
     {
-        claraPrint(mView, "TU is not yet loaded");
+        claraPrint(mView, "TU is not yet loaded or is reparsing");
         return empty;
     }
     if (pybind11::len(locations) != 1)
@@ -643,12 +643,12 @@ void CodeCompleter::HandleDiagnostic(clang::DiagnosticsEngine::Level level,
                                      const clang::Diagnostic &info)
 {
     clang::DiagnosticConsumer::HandleDiagnostic(level, info);
-    if (!mSourceMgr->isInMainFile(info.getLocation()))
-    {
-        // not interested in diagnostics that are somewhere outside of the
-        // file that we're looking at.
-        return;
-    }
+    // if (!mSourceMgr->isInMainFile(info.getLocation()))
+    // {
+    //     // not interested in diagnostics that are somewhere outside of the
+    //     // file that we're looking at.
+    //     return;
+    // }
     const auto loc = mSourceMgr->getPresumedLoc(info.getLocation());
     std::ostringstream ss;
     if (loc.isValid())
